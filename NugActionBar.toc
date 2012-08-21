@@ -1,4 +1,4 @@
-## Interface: 40200
+## Interface: 50000
 ## Title: NugActionBar
 ## Notes: --
 ## Author: d87
