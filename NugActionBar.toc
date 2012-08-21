@@ -1,0 +1,8 @@
+## Interface: 40200
+## Title: NugActionBar
+## Notes: --
+## Author: d87
+## SavedVariables: NugActionBarDB_Global
+## SavedVariablesPerCharacter: NugActionBarDB_Character
+NugActionBar.lua
+MainMenuMod.lua
