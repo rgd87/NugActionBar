@@ -122,7 +122,8 @@ function NugActionBar.ReplaceDefauitActionButtons()
 
     NugActionBar.CreateLeaveButton()
 
-    
+    MultiActionBar_HideAllGrids = function() end
+
     NugActionBar.headers = {}
     ActionBarButtonEventsFrame:UnregisterAllEvents()
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true))
@@ -282,27 +283,27 @@ end
 local Mappings = {
     ["DRUID"] = "[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] %s; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;",
     ["WARRIOR"] = "[stance:1] 7; [stance:2] 8; [stance:3] 9;",
-    ["MONK"] = "[stance:1] 7; [stance:2] 8;",
+    ['MONK'] = '[form:1] %s; [form:2] 7;',
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
     ["WARLOCK"] = "[form:2] 7;",
-    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [bonusbar:5] 11; ",
+    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [vehicleui] 12; ",
 }
 function NugActionBar.MakeStateDriverCondition()
     local class = select(2,UnitClass("player"))
     local special
+    local spec = GetSpecialization()
     if class == "DRUID" then
         -- Handles prowling, prowling has no real stance, so this is a hack which utilizes the Tree of Life bar for non-resto druids.
-        special = string.format(Mappings[class], IsSpellKnown(33891) and 7 or 8) -- Tree of Life
+        special = string.format(Mappings[class], (spec == 4) and 7 or 8) 
+    elseif class == "MONK" then
+        special = string.format(Mappings[class], (spec == 1 and 8 or spec == 2 and 9 or spec == 3 and 7 or 9))
     else
         special = Mappings[class] or ''
     end
     return Mappings.BASE .. special .. " 1"
 end
 
-
-function NugActionBar.COPANION_UPDATEW(self,event)
-end
 function NugActionBar.PLAYER_LOGIN(self,event, arg1)
     local tR = IsAddOnLoaded("tullaRange")
     if tR then
@@ -623,6 +624,9 @@ function NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,event, actionID)
             ActionButton_ShowOverlayGlow(self)
         end
     end
+end
+function NugActionBar.SPELL_UPDATE_CHARGES(self)
+    NugActionBar.UpdateCount(self)
 end
 function NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
     local action = GetActionID(self)
