@@ -16,6 +16,7 @@ local default = {
 }
 local db
 local autocastOverlay
+local useTullaRange
 
 function NugActionBar.ADDON_LOADED(self,event,arg1)
     if arg1 ~= "NugActionBar" then return end
@@ -103,6 +104,11 @@ function NugActionBar.ReplaceDefauitActionButtons()
     MainMenuBarArtFrame:SetPoint("BOTTOM",UIParent,"BOTTOM",0,0)
     PetActionBarFrame:SetParent(UIParent)
 
+    -- PetBattleFrame.BottomFrame:Hide()
+    -- PetBattleFrame.BottomFrame.Show = function() end
+    -- PetBattleFrame.BottomFrame.PetSelectionFrame:SetParent(bBars)
+    PetBattleFrame.BottomFrame:SetFrameStrata("HIGH")
+
 
     MainMenuBar_UpdateArt = function() return true end
 
@@ -137,65 +143,65 @@ function NugActionBar.ReplaceDefauitActionButtons()
 end
 
 
--- local allowedSpellsSnippet
--- local _,class = UnitClass("player")
--- if class == "PRIEST" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[2050] = true -- Heal
---         healingSpells[2060] = true -- Greater Heal
---         healingSpells[2061] = true -- Flash Heal
---         healingSpells[32546] = true -- Binding Heal
---         healingSpells[47540] = true -- Penance
---         healingSpells[33076] = true -- Prayer of Mending
---         healingSpells[596] = true -- Prayer of Healing
---         healingSpells[17] = true -- Power Word: Shield
---         healingSpells[139] = true -- Renew
---         healingSpells[33206] = true -- Pain Suppression
---         healingSpells[47788] = true -- Guardian Spirit
---         healingSpells[34861] = true -- Circle of Healing
---         healingSpells[527] = true -- Dispel
---         healingSpells[528] = true -- Cure Disease        
---         ----healingSpells[88684] = true -- Holy Word: Serenity
---         healingSpells[73325] = true -- Leap of Faith
---         healingSpells[10060] = true -- Power Infusion
---     ]]
--- elseif class == "DRUID" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[50464] = true -- Nourish
---         healingSpells[774] = true -- Rejuvenation
---         healingSpells[8936] = true -- Regrowth
---         healingSpells[2782] = true -- Remove Corruption
---         healingSpells[33763] = true -- Lifebloom
---         healingSpells[5185] = true -- Healing Touch
---         healingSpells[18562] = true -- Swiftmend
---         healingSpells[48438] = true -- Wild Growth
---     ]]
--- elseif class == "SHAMAN" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[331] = true -- Healing Wave
---         healingSpells[51886] = true -- Cleanse Spirit
---         healingSpells[8004] = true -- Healing Surge
---         healingSpells[1064] = true -- Chain Heal
---         healingSpells[974] = true -- Earth Shield
---         healingSpells[61295] = true -- Riptide
---     ]]
--- elseif class == "PALADIN" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[635] = true -- Holy Light
---         healingSpells[85673] = true -- Word of Glory
---         healingSpells[19750] = true -- Flash of Light
---         healingSpells[633] = true -- Lay on Hands
---         healingSpells[4987] = true -- Cleanse
---         healingSpells[82326] = true -- Divine Light
---         healingSpells[85222] = true -- Light of Dawn
---         healingSpells[53563] = true -- Beacon of Light
---         healingSpells[20473] = true -- Holy Shock
---     ]]
--- else allowedSpellsSnippet = [[ healingSpells = table.new() ]] end
+local allowedSpellsSnippet
+local _,class = UnitClass("player")
+if class == "PRIEST" then
+    allowedSpellsSnippet = [[
+        healingSpells = table.new()
+        healingSpells[2050] = true -- Heal
+        healingSpells[2060] = true -- Greater Heal
+        healingSpells[2061] = true -- Flash Heal
+        healingSpells[32546] = true -- Binding Heal
+        healingSpells[47540] = true -- Penance
+        healingSpells[33076] = true -- Prayer of Mending
+        healingSpells[596] = true -- Prayer of Healing
+        healingSpells[17] = true -- Power Word: Shield
+        healingSpells[139] = true -- Renew
+        healingSpells[33206] = true -- Pain Suppression
+        healingSpells[47788] = true -- Guardian Spirit
+        healingSpells[34861] = true -- Circle of Healing
+        healingSpells[527] = true -- Dispel
+        healingSpells[528] = true -- Cure Disease        
+        ----healingSpells[88684] = true -- Holy Word: Serenity
+        healingSpells[73325] = true -- Leap of Faith
+        healingSpells[10060] = true -- Power Infusion
+    ]]
+elseif class == "DRUID" then
+    allowedSpellsSnippet = [[
+        healingSpells = table.new()
+        healingSpells[50464] = true -- Nourish
+        healingSpells[774] = true -- Rejuvenation
+        healingSpells[8936] = true -- Regrowth
+        healingSpells[2782] = true -- Remove Corruption
+        healingSpells[33763] = true -- Lifebloom
+        healingSpells[5185] = true -- Healing Touch
+        healingSpells[18562] = true -- Swiftmend
+        healingSpells[48438] = true -- Wild Growth
+    ]]
+elseif class == "SHAMAN" then
+    allowedSpellsSnippet = [[
+        healingSpells = table.new()
+        healingSpells[331] = true -- Healing Wave
+        healingSpells[51886] = true -- Cleanse Spirit
+        healingSpells[8004] = true -- Healing Surge
+        healingSpells[1064] = true -- Chain Heal
+        healingSpells[974] = true -- Earth Shield
+        healingSpells[61295] = true -- Riptide
+    ]]
+elseif class == "PALADIN" then
+    allowedSpellsSnippet = [[
+        healingSpells = table.new()
+        healingSpells[635] = true -- Holy Light
+        healingSpells[85673] = true -- Word of Glory
+        healingSpells[19750] = true -- Flash of Light
+        healingSpells[633] = true -- Lay on Hands
+        healingSpells[4987] = true -- Cleanse
+        healingSpells[82326] = true -- Divine Light
+        healingSpells[85222] = true -- Light of Dawn
+        healingSpells[53563] = true -- Beacon of Light
+        healingSpells[20473] = true -- Holy Shock
+    ]]
+else allowedSpellsSnippet = [[ healingSpells = table.new() ]] end
 
 -- local HeaderRangeCheck = function(self,time)
 --     self.OnUpdateCounter = (self.OnUpdateCounter or 0) + time
@@ -215,36 +221,56 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     local header = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
     header:Execute[[ btns = table.new() ]]
 
-    -- header:Execute([[ healbtns = table.new() ]])
-    -- header:Execute(allowedSpellsSnippet)
-    -- header:SetAttribute("_onstate-unit",[[
-    --     for healbtn, _ in pairs(healbtns) do
-    --         healbtn:SetAttribute("unit", newstate)
-    --         healbtn:CallMethod("Update",true)
-    --     end
-    -- ]])
+    header:Execute([[ healbtns = table.new() ]])
+    header:Execute(allowedSpellsSnippet)
 
 
-    -- header:SetAttribute("check_spell", [[
-    --     local action, index = ...
-    --     local btn = btns[index]
-    --     if HasAction(action) then
-    --         local actionType, spellID = GetActionInfo(action)
-    --         if actionType == "spell" and healingSpells[spellID] then
-    --             print("adding "..btn:GetName().."to healbtns")
-    --             healbtns[btn] = true
+    -- IsActionInRange has 2nd unit arg, and to support range updates on unit change
+    -- it is required to patch tullaRange to use it
+    -- Or i have to finally make internal range checking
+    header:SetAttribute("_onstate-unit",[[
+        for healbtn, _ in pairs(healbtns) do
+            -- print("newunit", newstate, healbtn:GetName())
+            healbtn:SetAttribute("unit", newstate)
+            -- healbtn:CallMethod("UpdateUsableInRange",true)
+        end
+    ]])
+
+
+    header:SetAttribute("check_spell", [[
+        local action, index = ...
+        local btn = btns[index]
+        if HasAction(action) then
+            local actionType, spellID = GetActionInfo(action)
+            if actionType == "spell" and healingSpells[spellID] then
+                print("adding "..btn:GetName().."to healbtns")
+                healbtns[btn] = true
+            end
+        else
+            btn:SetAttribute("unit", nil)
+            healbtns[btn] = nil
+        end
+    ]])
+    -- header:SetAttribute("_onstate-visibility",[[
+    --     for i,btn in ipairs(btns) do
+    --         print(newstate)
+    --         if newstate == "show" then
+    --             btn:Show()
+    --         else btn:Hide()
     --         end
-    --     else
-    --         healbtns[btn] = nil
     --     end
     -- ]])
 
     header:SetAttribute("_onstate-remap",[[
         for i,btn in ipairs(btns) do
             newstate = tonumber(newstate)
+            --if newstate == 0 then btn:Hide() -- hiding for petbattles
+            --else
+
             btn:SetAttribute("actionpage",newstate)
             local page = btn:GetAttribute("actionpage")-1
             local action = page*12 + btn:GetAttribute("action")
+            btn:CallMethod("SetActionID",action)
             if HasAction(action) then
                 btn:Show()
             else
@@ -255,6 +281,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
             -- self:RunAttribute("check_spell",action, i)
             local animate = not (newstate >= 2 and newstate <= 6)
             btn:CallMethod("Update",true,animate)
+            --end
         end
     ]])
     header:SetFrameLevel(3)
@@ -275,7 +302,8 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
 
     header.doremap = doremap
     if doremap then RegisterStateDriver(header, "remap", NugActionBar.MakeStateDriverCondition()) end
-    -- RegisterStateDriver(header,"unit", "[@mouseover,help,exists,nodead] mouseover; [@target,help,exists,nodead] target; player")
+    -- RegisterStateDriver(header, "visibility", "[petbattle] hide; show")
+    RegisterStateDriver(header,"unit", "[@mouseover,help,exists,nodead] mouseover; [@target,help,exists,nodead] target; player")
 
     return header
 end
@@ -287,7 +315,7 @@ local Mappings = {
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
     ["WARLOCK"] = "[form:2] 7;",
-    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [vehicleui] 12; ",
+    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [possessbar][vehicleui] 12; ", --[petbattle] 0; 
 }
 function NugActionBar.MakeStateDriverCondition()
     local class = select(2,UnitClass("player"))
@@ -304,9 +332,10 @@ function NugActionBar.MakeStateDriverCondition()
     return Mappings.BASE .. special .. " 1"
 end
 
+
 function NugActionBar.PLAYER_LOGIN(self,event, arg1)
-    local tR = IsAddOnLoaded("tullaRange")
-    if tR then
+    useTullaRange = IsAddOnLoaded("tullaRange")
+    if useTullaRange then
         hooksecurefunc(tullaRange, 'PLAYER_LOGIN',
                        function(self, event)
                            hooksecurefunc(NugActionBar,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
@@ -314,13 +343,14 @@ function NugActionBar.PLAYER_LOGIN(self,event, arg1)
                            for _, hdr in ipairs(NugActionBar.headers) do
                                for i,frame in ipairs(hdr) do
                                    tullaRange.RegisterButton(frame)
+                                   frame.UpdateUsableInRange = tullaRange.UpdateButtonUsable
                                end
                            end
                        end)
     end
     for _, hdr in ipairs(NugActionBar.headers) do
         for i,frame in ipairs(hdr) do
-            NugActionBar.UpdateButton(frame)
+            NugActionBar.UpdateButton(frame, true)
         end
     end
 end
@@ -385,6 +415,7 @@ function NugActionBar.CreateShortBar(n)
     end
 end
 
+local SetActionID = function(self, action) self.action = action end
 function NugActionBar.CreateButton(header, rowName, page, index)
     -- local btn = CreateFrame("CheckButton", "NugActionBarButton"..index,header,
                     -- "SecureActionButtonTemplate, ActionButtonTemplate")
@@ -421,6 +452,8 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     btn:SetScript("OnEvent",ButtonOnEvent)
     btn:SetScript("OnAttributeChanged",nil)
     btn.Update = NugActionBar.UpdateButton
+    -- btn.UpdateUsableInRange = function() end
+    btn.SetActionID = SetActionID
     btn:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
     btn:RegisterEvent("ACTIONBAR_SHOWGRID")
     btn:RegisterEvent("ACTIONBAR_HIDEGRID")
@@ -631,12 +664,10 @@ end
 function NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
-    if ( actionType == "spell" and id == actionID ) then
-        if autocastOverlay then
-            AutoCastShine_AutoCastStop(self.acshine)
-        else   
-            ActionButton_HideOverlayGlow(self);
-        end
+    if autocastOverlay and ( actionType == "spell" and id == actionID ) then
+        AutoCastShine_AutoCastStop(self.acshine)
+    else
+        ActionButton_HideOverlayGlow(self);
     end
 end
 
@@ -644,19 +675,19 @@ function NugActionBar.UpdateButton(self, secure, animate)
     if not secure and InCombatLockdown() then return end
 
     -- if not secure then
-    --     local hdr = self.header
-    --     hdr:SetAttribute("updated_button_index", self.index)
-    --     hdr:Execute[[
-    --         local i = self:GetAttribute("updated_button_index")
-    --         local btn = btns[i]
-    --         local page = btn:GetAttribute("actionpage")-1
-    --         local action = page*12 + btn:GetAttribute("action")
-    --         self:RunAttribute("check_spell",action, i)
-    --     ]]
+        local hdr = self.header
+        hdr:SetAttribute("updated_button_index", self.index)
+        hdr:Execute[[
+            local i = self:GetAttribute("updated_button_index")
+            local btn = btns[i]
+            local page = btn:GetAttribute("actionpage")-1
+            local action = page*12 + btn:GetAttribute("action")
+            self:RunAttribute("check_spell",action, i)
+        ]]
     -- end
 
     local action = GetActionID(self)
-    self.action = action
+
     if HasAction(action) then
         self:RegisterEvent("ACTIONBAR_UPDATE_STATE")
         self:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
