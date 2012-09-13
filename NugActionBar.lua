@@ -1,7 +1,7 @@
 NugActionBar = CreateFrame("Frame", "NugActionBar", UIParent)
 
 NugActionBar:SetScript("OnEvent", function(self, event, ...)
-    self[event](self, event, ...)
+    return self[event](self, event, ...)
 end)
 
 local UpdateUsable
@@ -15,6 +15,7 @@ local default = {
     x = 0,
 }
 local db
+local _G = _G
 local autocastOverlay
 local useTullaRange
 
@@ -41,6 +42,10 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
         NugActionBar.ReplaceDefauitActionButtons()
     end
     NugActionBar.MoveNewBar(db.x,0)
+
+    NugActionBar:RegisterEvent("ACTIONBAR_SHOWGRID")
+    NugActionBar:RegisterEvent("ACTIONBAR_HIDEGRID")
+    NugActionBar:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 
     SLASH_NAB1= "/nab"
     SlashCmdList["NAB"] = NugActionBar.SlashCmd
@@ -128,6 +133,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
 
     NugActionBar.CreateLeaveButton()
 
+    MultiActionBar_ShowAllGrids = function() end
     MultiActionBar_HideAllGrids = function() end
 
     NugActionBar.headers = {}
@@ -243,7 +249,6 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
         if HasAction(action) then
             local actionType, spellID = GetActionInfo(action)
             if actionType == "spell" and healingSpells[spellID] then
-                print("adding "..btn:GetName().."to healbtns")
                 healbtns[btn] = true
             end
         else
@@ -260,6 +265,17 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     --         end
     --     end
     -- ]])
+    header:SetAttribute("_onattributechanged", [[
+        if name ~= "showgrid" then return end
+        local show = value == 1
+        for i,btn in ipairs(btns) do
+            if show then 
+                btn:CallMethod("ShowGrid")
+            else
+                btn:CallMethod("HideGrid")
+            end
+        end
+    ]])
 
     header:SetAttribute("_onstate-remap",[[
         for i,btn in ipairs(btns) do
@@ -274,7 +290,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
             if HasAction(action) then
                 btn:Show()
             else
-                if btn:GetAttribute("showgrid") == 0 then
+                if self:GetAttribute("showgrid") == 0 then
                     btn:Hide()
                 end
             end
@@ -290,6 +306,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     -- header:SetHeight(32)
     -- header:SetPoint("CENTER",UIParent, "CENTER",0,0)
     
+    header:SetAttribute("showgrid", 0)
     for i=1,12 do
         local btn = NugActionBar.CreateButton(header, rowName, page, i)
         if not btn then break end
@@ -365,6 +382,7 @@ local ButtonOnEvent = function(self,event, ...)
     if NugActionBar[event] then return NugActionBar[event](self, event, ...) end
 end
 local ButtonOnDragStart = function(self)
+    if InCombatLockdown() then return end
     local action = GetActionID(self)
     if ( LOCK_ACTIONBAR ~= "1" or IsModifiedClick("PICKUPACTION") ) then
         SpellFlyout:Hide()
@@ -416,6 +434,23 @@ function NugActionBar.CreateShortBar(n)
 end
 
 local SetActionID = function(self, action) self.action = action end
+local ButtonShowGrid = function(btn)
+            local action = GetActionID(btn)
+            if not HasAction(action) or btn.isDragging then
+                btn:Show()
+                _G[btn:GetName().."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0, 0.5);
+                -- self:SetNormalTexture("Interface\\Buttons\\UI-Quickslot")
+            end
+            -- btn:SetAttribute("showgrid", 1)
+end
+local ButtonHideGrid = function(btn)
+            local action = GetActionID(btn)
+            if not HasAction(action) then
+                btn:Hide()
+            end
+            -- btn:SetAttribute("showgrid", 0)
+            _G[btn:GetName().."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0, 1);
+end
 function NugActionBar.CreateButton(header, rowName, page, index)
     -- local btn = CreateFrame("CheckButton", "NugActionBarButton"..index,header,
                     -- "SecureActionButtonTemplate, ActionButtonTemplate")
@@ -454,10 +489,10 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     btn.Update = NugActionBar.UpdateButton
     -- btn.UpdateUsableInRange = function() end
     btn.SetActionID = SetActionID
-    btn:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-    btn:RegisterEvent("ACTIONBAR_SHOWGRID")
-    btn:RegisterEvent("ACTIONBAR_HIDEGRID")
-    NugActionBar.ACTIONBAR_HIDEGRID(btn)
+    btn.HideGrid = ButtonHideGrid
+    btn.ShowGrid = ButtonShowGrid
+    btn:HideGrid()
+    -- NugActionBar.ACTIONBAR_HIDEGRID(btn)
 
     if autocastOverlay then
         local shine = CreateFrame("Frame", "$parentShine", btn, "AutoCastShineTemplate")
@@ -563,31 +598,34 @@ UpdateUsable = NugActionBar.ACTIONBAR_UPDATE_USABLE
     -- print(event)
 -- end
 function NugActionBar.ACTIONBAR_SLOT_CHANGED(self,event, slot)
-    local action = GetActionID(self)
-    if action == slot or slot == 0 then
-        NugActionBar.UpdateButton(self, InCombatLockdown() and true or false)
+    for _, hdr in ipairs(NugActionBar.headers) do
+        for _, btn in ipairs(hdr) do
+            local action = GetActionID(btn)
+            if action == slot or slot == 0 then
+                NugActionBar.UpdateButton(btn, InCombatLockdown())
+            end
+        end
     end
 end
 function NugActionBar.ACTIONBAR_SHOWGRID(self,event)
     if InCombatLockdown() then return end
 
-    local action = GetActionID(self)
-    if not HasAction(action) or self.isDragging then
-        self:Show()
-        _G[self:GetName().."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0, 0.5);
-        -- self:SetNormalTexture("Interface\\Buttons\\UI-Quickslot")
+    for _, hdr in ipairs(NugActionBar.headers) do
+        hdr:SetAttribute("showgrid", 1)
+        for _, btn in ipairs(hdr) do
+            btn:ShowGrid()
+        end
     end
-    self:SetAttribute("showgrid", 1)
 end
 function NugActionBar.ACTIONBAR_HIDEGRID(self,event)
     if InCombatLockdown() then return end
 
-    local action = GetActionID(self)
-    if not HasAction(action) then
-        self:Hide()
+    for _, hdr in ipairs(NugActionBar.headers) do
+        hdr:SetAttribute("showgrid", 0)
+        for _, btn in ipairs(hdr) do
+            btn:HideGrid()
+        end
     end
-    self:SetAttribute("showgrid", 0)
-    _G[self:GetName().."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0, 1);
 end
 
 function NugActionBar.UpdateSpellActivationOverlay(self)
@@ -672,9 +710,9 @@ function NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
 end
 
 function NugActionBar.UpdateButton(self, secure, animate)
-    if not secure and InCombatLockdown() then return end
+    if (not secure) and InCombatLockdown() then return end
 
-    -- if not secure then
+    if not secure then
         local hdr = self.header
         hdr:SetAttribute("updated_button_index", self.index)
         hdr:Execute[[
@@ -684,7 +722,7 @@ function NugActionBar.UpdateButton(self, secure, animate)
             local action = page*12 + btn:GetAttribute("action")
             self:RunAttribute("check_spell",action, i)
         ]]
-    -- end
+    end
 
     local action = GetActionID(self)
 
@@ -720,7 +758,7 @@ function NugActionBar.UpdateButton(self, secure, animate)
         self:UnregisterEvent("PLAYER_LEAVE_COMBAT")
         self:UnregisterEvent("SPELL_UPDATE_CHARGES");
 
-        if not secure and self:GetAttribute("showgrid") == 0 then
+        if not secure and self:GetParent():GetAttribute("showgrid") == 0 then
             self:Hide()
         end
     end
