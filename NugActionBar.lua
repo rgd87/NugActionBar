@@ -294,7 +294,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
                     btn:Hide()
                 end
             end
-            -- self:RunAttribute("check_spell",action, i)
+            self:RunAttribute("check_spell", action, i)
             local animate = not (newstate >= 2 and newstate <= 6)
             btn:CallMethod("Update",true,animate)
             --end
@@ -438,7 +438,7 @@ local ButtonShowGrid = function(btn)
             local action = GetActionID(btn)
             if not HasAction(action) or btn.isDragging then
                 btn:Show()
-                _G[btn:GetName().."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0, 0.5);
+                btn.normalTexture:SetVertexColor(1.0, 1.0, 1.0, 0.5);
                 -- self:SetNormalTexture("Interface\\Buttons\\UI-Quickslot")
             end
             -- btn:SetAttribute("showgrid", 1)
@@ -449,7 +449,7 @@ local ButtonHideGrid = function(btn)
                 btn:Hide()
             end
             -- btn:SetAttribute("showgrid", 0)
-            _G[btn:GetName().."NormalTexture"]:SetVertexColor(1.0, 1.0, 1.0, 1);
+            btn.normalTexture:SetVertexColor(1.0, 1.0, 1.0, 1);
 end
 function NugActionBar.CreateButton(header, rowName, page, index)
     -- local btn = CreateFrame("CheckButton", "NugActionBarButton"..index,header,
@@ -469,6 +469,11 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     btn:GetPushedTexture():SetBlendMode("ADD")
     btn:GetPushedTexture():SetTexCoord(0.2,0.8,0.2,0.8)
     btn:GetPushedTexture():SetVertexColor(0.5,0.5,1)
+
+    btn.count = _G[btn:GetName().."Count"]
+    btn.icon = _G[btn:GetName().."Icon"]
+    btn.cooldown = _G[btn:GetName().."Cooldown"]
+    btn.normalTexture = _G[btn:GetName().."NormalTexture"]
 
     btn:SetID(index)
     -- local anchor = header[index-1] or header
@@ -569,15 +574,15 @@ function NugActionBar.ACTIONBAR_UPDATE_STATE(self,event)
 end
 function NugActionBar.ACTIONBAR_UPDATE_COOLDOWN(self,event)
     local action = GetActionID(self)
-    local cooldown = _G[self:GetName().."Cooldown"];
+    local cooldown = self.cooldown
     local start, duration, enable = GetActionCooldown(action);
     CooldownFrame_SetTimer(cooldown, start, duration, enable);
 end
 function NugActionBar.ACTIONBAR_UPDATE_USABLE(self,event, inRange)
     local action = GetActionID(self)
     local name = self:GetName();
-    local icon = _G[name.."Icon"];
-    local normalTexture = _G[name.."NormalTexture"];
+    local icon = self.icon
+    local normalTexture = self.normalTexture
     local isUsable, notEnoughMana = IsUsableAction(action);
     if ( isUsable ) then
         icon:SetVertexColor(1.0, 1.0, 1.0);
@@ -647,7 +652,7 @@ function NugActionBar.UpdateFlash (self)
 end
 
 function NugActionBar.UpdateCount(self)
-    local text = _G[self:GetName().."Count"];
+    local text = self.count
     local action = GetActionID(self)
     if ( IsConsumableAction(action) or IsStackableAction(action) or (not IsItemAction(action) and GetActionCount(action) > 0) ) then
         local count = GetActionCount(action);
@@ -771,10 +776,16 @@ function NugActionBar.UpdateButton(self, secure, animate)
         end
     end
 
+    NugActionBar.UpdateCount(self)
+    NugActionBar.ACTIONBAR_UPDATE_STATE(self)
+    ActionButton_UpdateFlyout(self)
+    NugActionBar.UpdateFlash(self)
+    NugActionBar.UpdateSpellActivationOverlay(self)
+
     local action = GetActionID(self)
     local icon = self.icon
     local name = self:GetName()
-    local buttonCooldown = _G[name.."Cooldown"]
+    local buttonCooldown = self.cooldown
     local texture = GetActionTexture(action)
     if ( texture ) then
         self.icon:SetTexture(texture)
@@ -783,6 +794,7 @@ function NugActionBar.UpdateButton(self, secure, animate)
     else
         self.icon:SetTexture(nil)
         icon:Hide();
+        self.count:SetText("")
         buttonCooldown:Hide();
         self:SetNormalTexture("Interface\\Buttons\\UI-Quickslot")
     end
@@ -793,13 +805,4 @@ function NugActionBar.UpdateButton(self, secure, animate)
     -- else
     --     actionText:SetText("");
     -- end
-    NugActionBar.UpdateCount(self)
-
-    NugActionBar.ACTIONBAR_UPDATE_STATE(self)
-
-    ActionButton_UpdateFlyout(self)
-    NugActionBar.UpdateFlash(self)
-
-    NugActionBar.UpdateSpellActivationOverlay(self)
-
 end
