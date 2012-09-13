@@ -4,7 +4,9 @@ NugActionBar:SetScript("OnEvent", function(self, event, ...)
     return self[event](self, event, ...)
 end)
 
-local UpdateUsable
+NugActionBar.Button = {}
+local NugActionBarButton = NugActionBar.Button
+
 NugActionBar:RegisterEvent("ADDON_LOADED")
 
 local default = {
@@ -355,19 +357,18 @@ function NugActionBar.PLAYER_LOGIN(self,event, arg1)
     if useTullaRange then
         hooksecurefunc(tullaRange, 'PLAYER_LOGIN',
                        function(self, event)
-                           hooksecurefunc(NugActionBar,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
-                           hooksecurefunc(NugActionBar,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
+                           hooksecurefunc(NugActionBarButton,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
+                           hooksecurefunc(NugActionBarButton,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
                            for _, hdr in ipairs(NugActionBar.headers) do
                                for i,frame in ipairs(hdr) do
                                    tullaRange.RegisterButton(frame)
-                                   frame.UpdateUsableInRange = tullaRange.UpdateButtonUsable
                                end
                            end
                        end)
     end
     for _, hdr in ipairs(NugActionBar.headers) do
         for i,frame in ipairs(hdr) do
-            NugActionBar.UpdateButton(frame, true)
+            NugActionBarButton.UpdateButton(frame, true)
         end
     end
 end
@@ -379,7 +380,7 @@ end
 
 
 local ButtonOnEvent = function(self,event, ...)
-    if NugActionBar[event] then return NugActionBar[event](self, event, ...) end
+    return NugActionBarButton[event](self, event, ...)
 end
 local ButtonOnDragStart = function(self)
     if InCombatLockdown() then return end
@@ -491,13 +492,11 @@ function NugActionBar.CreateButton(header, rowName, page, index)
 
     btn:SetScript("OnEvent",ButtonOnEvent)
     btn:SetScript("OnAttributeChanged",nil)
-    btn.Update = NugActionBar.UpdateButton
-    -- btn.UpdateUsableInRange = function() end
+    btn.Update = NugActionBarButton.UpdateButton
     btn.SetActionID = SetActionID
     btn.HideGrid = ButtonHideGrid
     btn.ShowGrid = ButtonShowGrid
     btn:HideGrid()
-    -- NugActionBar.ACTIONBAR_HIDEGRID(btn)
 
     if autocastOverlay then
         local shine = CreateFrame("Frame", "$parentShine", btn, "AutoCastShineTemplate")
@@ -553,61 +552,16 @@ function NugActionBar.CreateLeaveButton(self)
     MainMenuBarVehicleLeaveButton.Show = function() end
 end
 
--- function NugActionBar.UPDATE_BINDINGS(self)
-    -- if InCombatLockdown() then return end
-    -- print("Bindings")
-    -- local hdr = _G["NugActionBarHeader"]
-    -- for i,frame in ipairs(hdr) do
-    --     local key1, key2 = GetBindingKey(frame.originalBinding)
-    --     if key1 then SetOverrideBindingClick(frame, false, key1,frame:GetName()) end
-    --     if key2 then SetOverrideBindingClick(frame, false, key2,frame:GetName()) end
-    -- end
--- end
 
-function NugActionBar.ACTIONBAR_UPDATE_STATE(self,event)
-    local action = GetActionID(self)
-    if ( action and (IsCurrentAction(action) or IsAutoRepeatAction(action)) ) then
-        self:SetChecked(1)
-    else
-        self:SetChecked(0)
-    end
-end
-function NugActionBar.ACTIONBAR_UPDATE_COOLDOWN(self,event)
-    local action = GetActionID(self)
-    local cooldown = self.cooldown
-    local start, duration, enable = GetActionCooldown(action);
-    CooldownFrame_SetTimer(cooldown, start, duration, enable);
-end
-function NugActionBar.ACTIONBAR_UPDATE_USABLE(self,event, inRange)
-    local action = GetActionID(self)
-    local name = self:GetName();
-    local icon = self.icon
-    local normalTexture = self.normalTexture
-    local isUsable, notEnoughMana = IsUsableAction(action);
-    if ( isUsable ) then
-        icon:SetVertexColor(1.0, 1.0, 1.0);
-        normalTexture:SetVertexColor(1.0, 1.0, 1.0);
-    elseif ( notEnoughMana ) then
-        icon:SetVertexColor(0.7, 0.7, 1.0);
-        normalTexture:SetVertexColor(0.7, 0.7, 1.0);
-    else
-        icon:SetVertexColor(0.4, 0.4, 0.4);
-        normalTexture:SetVertexColor(1.0, 1.0, 1.0);
-    end
-end
-UpdateUsable = NugActionBar.ACTIONBAR_UPDATE_USABLE
--- function NugActionBar.UPDATE_INVENTORY_ALERTS(self,event)
-    -- print(event)
--- end
--- function NugActionBar.PLAYER_TARGET_CHANGED(self,event)
-    -- print(event)
--- end
+----------------------------------------
+-- Common event handlers
+----------------------------------------
 function NugActionBar.ACTIONBAR_SLOT_CHANGED(self,event, slot)
     for _, hdr in ipairs(NugActionBar.headers) do
         for _, btn in ipairs(hdr) do
             local action = GetActionID(btn)
             if action == slot or slot == 0 then
-                NugActionBar.UpdateButton(btn, InCombatLockdown())
+                NugActionBarButton.UpdateButton(btn, InCombatLockdown())
             end
         end
     end
@@ -632,17 +586,107 @@ function NugActionBar.ACTIONBAR_HIDEGRID(self,event)
         end
     end
 end
+-- function NugActionBar.UPDATE_BINDINGS(self)
+    -- if InCombatLockdown() then return end
+    -- print("Bindings")
+    -- local hdr = _G["NugActionBarHeader"]
+    -- for i,frame in ipairs(hdr) do
+    --     local key1, key2 = GetBindingKey(frame.originalBinding)
+    --     if key1 then SetOverrideBindingClick(frame, false, key1,frame:GetName()) end
+    --     if key2 then SetOverrideBindingClick(frame, false, key2,frame:GetName()) end
+    -- end
+-- end
 
-function NugActionBar.UpdateSpellActivationOverlay(self)
+
+-------------------------------------------------
+--- Button level event handlers and methods
+-------------------------------------------------
+function NugActionBarButton.ACTIONBAR_UPDATE_STATE(self,event)
+    local action = GetActionID(self)
+    if ( action and (IsCurrentAction(action) or IsAutoRepeatAction(action)) ) then
+        self:SetChecked(1)
+    else
+        self:SetChecked(0)
+    end
+end
+function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
+    local action = GetActionID(self)
+    local cooldown = self.cooldown
+    local start, duration, enable = GetActionCooldown(action);
+    CooldownFrame_SetTimer(cooldown, start, duration, enable);
+end
+function NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self,event, inRange)
+    local action = GetActionID(self)
+    local name = self:GetName();
+    local icon = self.icon
+    local normalTexture = self.normalTexture
+    local isUsable, notEnoughMana = IsUsableAction(action);
+    if ( isUsable ) then
+        icon:SetVertexColor(1.0, 1.0, 1.0);
+        normalTexture:SetVertexColor(1.0, 1.0, 1.0);
+    elseif ( notEnoughMana ) then
+        icon:SetVertexColor(0.7, 0.7, 1.0);
+        normalTexture:SetVertexColor(0.7, 0.7, 1.0);
+    else
+        icon:SetVertexColor(0.4, 0.4, 0.4);
+        normalTexture:SetVertexColor(1.0, 1.0, 1.0);
+    end
+end
+
+function NugActionBarButton.PLAYER_ENTER_COMBAT(self,event)
+    local action = GetActionID(self)
+    if ( IsAttackAction(action) ) then ActionButton_StartFlash(self) end
+end
+function NugActionBarButton.PLAYER_LEAVE_COMBAT(self,event)
+    local action = GetActionID(self)
+    if ( IsAttackAction(action) ) then ActionButton_StopFlash(self) end
+end
+function NugActionBarButton.START_AUTOREPEAT_SPELL(self,event)
+    local action = GetActionID(self)
+    if ( IsAutoRepeatAction(action) ) then ActionButton_StartFlash(self) end
+end
+function NugActionBarButton.STOP_AUTOREPEAT_SPELL(self,event)
+    local action = GetActionID(self)
+    if ( ActionButton_IsFlashing(self) and not IsAttackAction(action) ) then
+        ActionButton_StopFlash(self)
+    end
+end
+function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,event, actionID)
+    local action = GetActionID(self)
+    local actionType, id, subType = GetActionInfo(action);
+    if ( actionType == "spell" and id == actionID ) then
+        if autocastOverlay then
+            AutoCastShine_AutoCastStart(self.acshine)            
+        else
+            ActionButton_ShowOverlayGlow(self)
+        end
+    end
+end
+function NugActionBarButton.SPELL_UPDATE_CHARGES(self)
+    NugActionBarButton.UpdateCount(self)
+end
+function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
+    local action = GetActionID(self)
+    local actionType, id, subType = GetActionInfo(action);
+    if autocastOverlay and ( actionType == "spell" and id == actionID ) then
+        AutoCastShine_AutoCastStop(self.acshine)
+    else
+        ActionButton_HideOverlayGlow(self);
+    end
+end
+
+
+
+function NugActionBarButton.UpdateSpellActivationOverlay(self)
     local action = GetActionID(self)
     local spellType, id, subType  = GetActionInfo(action)
     if ( spellType == "spell" and IsSpellOverlayed(id) ) then
-        NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,nil,id);
+        NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,nil,id);
     else
-        NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,nil,id);
+        NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,nil,id);
     end
 end
-function NugActionBar.UpdateFlash (self)
+function NugActionBarButton.UpdateFlash (self)
     local action = GetActionID(self)
     if ( (IsAttackAction(action) and IsCurrentAction(action)) or IsAutoRepeatAction(action) ) then
         ActionButton_StartFlash(self);
@@ -651,7 +695,7 @@ function NugActionBar.UpdateFlash (self)
     end
 end
 
-function NugActionBar.UpdateCount(self)
+function NugActionBarButton.UpdateCount(self)
     local text = self.count
     local action = GetActionID(self)
     if ( IsConsumableAction(action) or IsStackableAction(action) or (not IsItemAction(action) and GetActionCount(action) > 0) ) then
@@ -671,50 +715,8 @@ function NugActionBar.UpdateCount(self)
     end
 end
 
-
-function NugActionBar.PLAYER_ENTER_COMBAT(self,event)
-    local action = GetActionID(self)
-    if ( IsAttackAction(action) ) then ActionButton_StartFlash(self) end
-end
-function NugActionBar.PLAYER_LEAVE_COMBAT(self,event)
-    local action = GetActionID(self)
-    if ( IsAttackAction(action) ) then ActionButton_StopFlash(self) end
-end
-function NugActionBar.START_AUTOREPEAT_SPELL(self,event)
-    local action = GetActionID(self)
-    if ( IsAutoRepeatAction(action) ) then ActionButton_StartFlash(self) end
-end
-function NugActionBar.STOP_AUTOREPEAT_SPELL(self,event)
-    local action = GetActionID(self)
-    if ( ActionButton_IsFlashing(self) and not IsAttackAction(action) ) then
-        ActionButton_StopFlash(self)
-    end
-end
-function NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,event, actionID)
-    local action = GetActionID(self)
-    local actionType, id, subType = GetActionInfo(action);
-    if ( actionType == "spell" and id == actionID ) then
-        if autocastOverlay then
-            AutoCastShine_AutoCastStart(self.acshine)            
-        else
-            ActionButton_ShowOverlayGlow(self)
-        end
-    end
-end
-function NugActionBar.SPELL_UPDATE_CHARGES(self)
-    NugActionBar.UpdateCount(self)
-end
-function NugActionBar.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
-    local action = GetActionID(self)
-    local actionType, id, subType = GetActionInfo(action);
-    if autocastOverlay and ( actionType == "spell" and id == actionID ) then
-        AutoCastShine_AutoCastStop(self.acshine)
-    else
-        ActionButton_HideOverlayGlow(self);
-    end
-end
-
-function NugActionBar.UpdateButton(self, secure, animate)
+function NugActionBarButton.UpdateButton(self, secure, animate)
+    -- self should be button object
     if (not secure) and InCombatLockdown() then return end
 
     if not secure then
@@ -745,8 +747,8 @@ function NugActionBar.UpdateButton(self, secure, animate)
         self:RegisterEvent("PLAYER_LEAVE_COMBAT")
         self:RegisterEvent("SPELL_UPDATE_CHARGES");
 
-        NugActionBar.ACTIONBAR_UPDATE_USABLE(self)
-        NugActionBar.ACTIONBAR_UPDATE_COOLDOWN(self)
+        NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self)
+        NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self)
 
         if not secure then self:Show() end
     else
@@ -776,11 +778,11 @@ function NugActionBar.UpdateButton(self, secure, animate)
         end
     end
 
-    NugActionBar.UpdateCount(self)
-    NugActionBar.ACTIONBAR_UPDATE_STATE(self)
+    NugActionBarButton.UpdateCount(self)
+    NugActionBarButton.ACTIONBAR_UPDATE_STATE(self)
     ActionButton_UpdateFlyout(self)
-    NugActionBar.UpdateFlash(self)
-    NugActionBar.UpdateSpellActivationOverlay(self)
+    NugActionBarButton.UpdateFlash(self)
+    NugActionBarButton.UpdateSpellActivationOverlay(self)
 
     local action = GetActionID(self)
     local icon = self.icon
