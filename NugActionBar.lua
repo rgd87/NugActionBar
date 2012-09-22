@@ -329,7 +329,7 @@ end
 
 local Mappings = {
     ["DRUID"] = "[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] %s; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;",
-    ["WARRIOR"] = "[stance:1] 7; [stance:2] 8; [stance:3] 9;",
+    -- ["WARRIOR"] = "[stance:1] 7; [stance:2] 8; [stance:3] 9;",
     ['MONK'] = '[form:1] %s; [form:2] 7;',
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
@@ -765,7 +765,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         self:UnregisterEvent("PLAYER_LEAVE_COMBAT")
         self:UnregisterEvent("SPELL_UPDATE_CHARGES");
 
-        if not secure and self:GetParent():GetAttribute("showgrid") == 0 then
+        if not secure and self.header:GetAttribute("showgrid") == 0 then
             self:Hide()
         end
     end
