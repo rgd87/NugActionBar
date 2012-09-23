@@ -143,6 +143,13 @@ function NugActionBar.ReplaceDefauitActionButtons()
 
     NugActionBar.headers = {}
     -- ActionBarButtonEventsFrame:UnregisterAllEvents()
+    ActionBarButtonEventsFrame_UnregisterFrame = function(frame)
+        for i, v in ipairs(ActionBarButtonEventsFrame.frames) do
+            if v == frame then
+                return table.remove(ActionBarButtonEventsFrame.frames, i)
+            end
+        end
+    end
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomLeftButton", 6, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
@@ -460,6 +467,7 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     local btn = _G[rowName..index]
     if not btn then return nil end
     ActionBarActionEventsFrame_UnregisterFrame(btn)
+    ActionBarButtonEventsFrame_UnregisterFrame(btn)
     btn:UnregisterAllEvents()
     btn.header = header
     btn:SetAttribute("type", "action");
