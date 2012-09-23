@@ -45,6 +45,9 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
     end
     NugActionBar.MoveNewBar(db.x,0)
 
+    SLASH_TPETJOURNAL1 = "/pj"
+    SlashCmdList["TPETJOURNAL"] = TogglePetJournal
+
     NugActionBar:RegisterEvent("ACTIONBAR_SHOWGRID")
     NugActionBar:RegisterEvent("ACTIONBAR_HIDEGRID")
     NugActionBar:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
@@ -139,10 +142,12 @@ function NugActionBar.ReplaceDefauitActionButtons()
     MultiActionBar_HideAllGrids = function() end
 
     NugActionBar.headers = {}
-    ActionBarButtonEventsFrame:UnregisterAllEvents()
+    -- ActionBarButtonEventsFrame:UnregisterAllEvents()
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomLeftButton", 6, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
+    -- table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 3, nil))
+    -- table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 4, nil))
 
     if NugActionBarDB_Character.ShortBar then
         NugActionBar.CreateShortBar(4)
@@ -168,11 +173,10 @@ if class == "PRIEST" then
         healingSpells[33206] = true -- Pain Suppression
         healingSpells[47788] = true -- Guardian Spirit
         healingSpells[34861] = true -- Circle of Healing
-        healingSpells[527] = true -- Dispel
-        healingSpells[528] = true -- Cure Disease        
-        ----healingSpells[88684] = true -- Holy Word: Serenity
+        healingSpells[527] = true -- Purify
         healingSpells[73325] = true -- Leap of Faith
         healingSpells[10060] = true -- Power Infusion
+        healingSpells[88684] = true -- Holy Word: Serenity (it works!)
     ]]
 elseif class == "DRUID" then
     allowedSpellsSnippet = [[
@@ -248,11 +252,9 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     header:SetAttribute("check_spell", [[
         local action, index = ...
         local btn = btns[index]
-        if HasAction(action) then
-            local actionType, spellID = GetActionInfo(action)
-            if actionType == "spell" and healingSpells[spellID] then
-                healbtns[btn] = true
-            end
+        local actionType, spellID = GetActionInfo(action)
+        if actionType == "spell" and healingSpells[spellID] then
+            healbtns[btn] = true
         else
             btn:SetAttribute("unit", nil)
             healbtns[btn] = nil
@@ -457,6 +459,7 @@ function NugActionBar.CreateButton(header, rowName, page, index)
                     -- "SecureActionButtonTemplate, ActionButtonTemplate")
     local btn = _G[rowName..index]
     if not btn then return nil end
+    ActionBarActionEventsFrame_UnregisterFrame(btn)
     btn:UnregisterAllEvents()
     btn.header = header
     btn:SetAttribute("type", "action");

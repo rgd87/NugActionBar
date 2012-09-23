@@ -33,10 +33,11 @@ function NugActionBar.HideRightPart()
         GuildMicroButton,
         PVPMicroButton,
         LFDMicroButton,
+        CompanionsMicroButton,
+        EJMicroButton,
         MainMenuMicroButton,
         HelpMicroButton,
         RaidMicroButton,
-        EJMicroButton,
     }
     for _,mbtn in ipairs(MicroButtons) do
         hooksecurefunc(mbtn,"Show",function(self)
