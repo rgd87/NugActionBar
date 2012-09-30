@@ -13,7 +13,7 @@ local default = {
     hiderighthalf = true,
     movebottomright = true,
     replacedefault = true,
-    changeoverlay = falsess,
+    changeoverlay = false,
     x = 0,
 }
 local db
@@ -47,10 +47,6 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
 
     SLASH_TPETJOURNAL1 = "/pj"
     SlashCmdList["TPETJOURNAL"] = TogglePetJournal
-
-    NugActionBar:RegisterEvent("ACTIONBAR_SHOWGRID")
-    NugActionBar:RegisterEvent("ACTIONBAR_HIDEGRID")
-    NugActionBar:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 
     SLASH_NAB1= "/nab"
     SlashCmdList["NAB"] = NugActionBar.SlashCmd
@@ -99,13 +95,17 @@ end
 
 function NugActionBar.ReplaceDefauitActionButtons()
     NugActionBar:RegisterEvent("PLAYER_LOGIN")
-
+    NugActionBar:RegisterEvent("ACTIONBAR_SHOWGRID")
+    NugActionBar:RegisterEvent("ACTIONBAR_HIDEGRID")
+    NugActionBar:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
     -- VehicleMenuBar:Hide()
     -- VehicleMenuBar.Show = function() end
     -- BonusActionBarFrame:Hide()
     -- BonusActionBarFrame.Show = function() end
-    MainMenuBar:Hide()
-    MainMenuBar.Show = function() end
+    -- MainMenuBar:Hide()
+    -- MainMenuBar.Show = function() end
+    -- OverrideActionBar:Hide()
+    -- OverrideActionBar.Show = function() end
     MainMenuBarArtFrame:SetParent(UIParent)
 
     MainMenuBarArtFrame:ClearAllPoints()
@@ -114,15 +114,15 @@ function NugActionBar.ReplaceDefauitActionButtons()
     MainMenuBarArtFrame:SetPoint("BOTTOM",UIParent,"BOTTOM",0,0)
     PetActionBarFrame:SetParent(UIParent)
 
-    -- PetBattleFrame.BottomFrame:Hide()
+    -- PetBattleFrame.BottomFrame:Hide() -- petbattles are not secure
     -- PetBattleFrame.BottomFrame.Show = function() end
     -- PetBattleFrame.BottomFrame.PetSelectionFrame:SetParent(bBars)
     PetBattleFrame.BottomFrame:SetFrameStrata("HIGH")
 
 
-    MainMenuBar_UpdateArt = function() return true end
+    -- MainMenuBar_UpdateArt = function() return true end
 
-    IsNormalActionBarState = function() return true end
+    -- IsNormalActionBarState = function() return true end -- taint
 
     MainMenuBarMaxLevelBar:SetParent(MainMenuBarArtFrame)
     MainMenuBarMaxLevelBar:SetPoint("TOP", MainMenuBarArtFrame, "TOP", 0,-11)
@@ -136,25 +136,67 @@ function NugActionBar.ReplaceDefauitActionButtons()
     MultiBarBottomRight:SetParent(UIParent)
     MainMenuBarVehicleLeaveButton:SetParent(UIParent)
 
+    local taintfucker = CreateFrame("Frame")
+    taintfucker.frames_to_show = {}
+    taintfucker.frames_to_hide = {}
+    taintfucker:RegisterEvent("PLAYER_LEAVE_COMBAT")
+    taintfucker:SetScript("OnEvent", function(self)
+            for frame in pairs(self.frames_to_hide) do
+                frame:Hide()
+            end
+            for frame in pairs(self.frames_to_show) do
+                frame:Show()
+            end
+        end)
+    local tfHide = function(self)
+            if not InCombatLockdown() then
+                return self:Hide1()
+            else
+                taintfucker.frames_to_hide[self] = true
+                taintfucker.frames_to_show[self] = nil
+            end
+        end
+    local tfShow = function(self)
+            if not InCombatLockdown() then
+                return self:Show1()
+            else
+                taintfucker.frames_to_show[self] = true
+                taintfucker.frames_to_hide[self] = nil
+            end
+        end
+    local fucktaint = function(bar)
+        bar.Show1 = bar.Show
+        bar.Hide1 = bar.Hide
+        bar.Show = tfShow
+        bar.Hide = tfHide
+    end
+    fucktaint(MultiBarBottomLeft)
+    fucktaint(MultiBarBottomRight)
+    fucktaint(MultiBarLeft)
+    fucktaint(MultiBarRight)
+
     NugActionBar.CreateLeaveButton()
 
     MultiActionBar_ShowAllGrids = function() end
     MultiActionBar_HideAllGrids = function() end
 
     NugActionBar.headers = {}
-    -- ActionBarButtonEventsFrame:UnregisterAllEvents()
-    ActionBarButtonEventsFrame_UnregisterFrame = function(frame)
-        for i, v in ipairs(ActionBarButtonEventsFrame.frames) do
-            if v == frame then
-                return table.remove(ActionBarButtonEventsFrame.frames, i)
-            end
-        end
-    end
+    ActionBarButtonEventsFrame:UnregisterAllEvents()
+    ActionBarActionEventsFrame:UnregisterAllEvents()
+    -- ActionBarButtonEventsFrame_UnregisterFrame = function(frame) --it's new, not overriding anything secure
+    --     for i, v in ipairs(ActionBarButtonEventsFrame.frames) do
+    --         if v == frame then
+    --             return table.remove(ActionBarButtonEventsFrame.frames, i)
+    --         end
+    --     end
+    -- end
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomLeftButton", 6, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
-    -- table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 3, nil))
-    -- table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 4, nil))
+    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 4, nil))
+    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 3, nil))
+    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ExtraActionButton", 15, nil))
+    NugActionBar:ExtraActionButton(NugActionBar.headers[6])
 
     if NugActionBarDB_Character.ShortBar then
         NugActionBar.CreateShortBar(4)
@@ -162,65 +204,81 @@ function NugActionBar.ReplaceDefauitActionButtons()
     end
 end
 
+-- function MultiActionBar_Update()
+--     if InCombatLockdown() then return end
+--     local leftHeader = NugActionBar.headers[4]
+--     local rightHeader = NugActionBar.headers[5]
+--     for _,btn in ipairs(leftHeader) do
+--         if SHOW_MULTI_ACTIONBAR_3 then
+--             btn:Show()
+--         else btn:Hide() end
+--     end
+--     for _,btn in ipairs(rightHeader) do
+--         if SHOW_MULTI_ACTIONBAR_4 then
+--             btn:Show()
+--         else btn:Hide() end
+--     end
+-- end
 
-local allowedSpellsSnippet
-local _,class = UnitClass("player")
-if class == "PRIEST" then
-    allowedSpellsSnippet = [[
-        healingSpells = table.new()
-        healingSpells[2050] = true -- Heal
-        healingSpells[2060] = true -- Greater Heal
-        healingSpells[2061] = true -- Flash Heal
-        healingSpells[32546] = true -- Binding Heal
-        healingSpells[47540] = true -- Penance
-        healingSpells[33076] = true -- Prayer of Mending
-        healingSpells[596] = true -- Prayer of Healing
-        healingSpells[17] = true -- Power Word: Shield
-        healingSpells[139] = true -- Renew
-        healingSpells[33206] = true -- Pain Suppression
-        healingSpells[47788] = true -- Guardian Spirit
-        healingSpells[34861] = true -- Circle of Healing
-        healingSpells[527] = true -- Purify
-        healingSpells[73325] = true -- Leap of Faith
-        healingSpells[10060] = true -- Power Infusion
-        healingSpells[88684] = true -- Holy Word: Serenity (it works!)
-    ]]
-elseif class == "DRUID" then
-    allowedSpellsSnippet = [[
-        healingSpells = table.new()
-        healingSpells[50464] = true -- Nourish
-        healingSpells[774] = true -- Rejuvenation
-        healingSpells[8936] = true -- Regrowth
-        healingSpells[2782] = true -- Remove Corruption
-        healingSpells[33763] = true -- Lifebloom
-        healingSpells[5185] = true -- Healing Touch
-        healingSpells[18562] = true -- Swiftmend
-        healingSpells[48438] = true -- Wild Growth
-    ]]
-elseif class == "SHAMAN" then
-    allowedSpellsSnippet = [[
-        healingSpells = table.new()
-        healingSpells[331] = true -- Healing Wave
-        healingSpells[51886] = true -- Cleanse Spirit
-        healingSpells[8004] = true -- Healing Surge
-        healingSpells[1064] = true -- Chain Heal
-        healingSpells[974] = true -- Earth Shield
-        healingSpells[61295] = true -- Riptide
-    ]]
-elseif class == "PALADIN" then
-    allowedSpellsSnippet = [[
-        healingSpells = table.new()
-        healingSpells[635] = true -- Holy Light
-        healingSpells[85673] = true -- Word of Glory
-        healingSpells[19750] = true -- Flash of Light
-        healingSpells[633] = true -- Lay on Hands
-        healingSpells[4987] = true -- Cleanse
-        healingSpells[82326] = true -- Divine Light
-        healingSpells[85222] = true -- Light of Dawn
-        healingSpells[53563] = true -- Beacon of Light
-        healingSpells[20473] = true -- Holy Shock
-    ]]
-else allowedSpellsSnippet = [[ healingSpells = table.new() ]] end
+
+-- local allowedSpellsSnippet
+-- local _,class = UnitClass("player")
+-- if class == "PRIEST" then
+--     allowedSpellsSnippet = [[
+--         healingSpells = table.new()
+--         healingSpells[2050] = true -- Heal
+--         healingSpells[2060] = true -- Greater Heal
+--         healingSpells[2061] = true -- Flash Heal
+--         healingSpells[32546] = true -- Binding Heal
+--         healingSpells[47540] = true -- Penance
+--         healingSpells[33076] = true -- Prayer of Mending
+--         healingSpells[596] = true -- Prayer of Healing
+--         healingSpells[17] = true -- Power Word: Shield
+--         healingSpells[139] = true -- Renew
+--         healingSpells[33206] = true -- Pain Suppression
+--         healingSpells[47788] = true -- Guardian Spirit
+--         healingSpells[34861] = true -- Circle of Healing
+--         healingSpells[527] = true -- Purify
+--         healingSpells[73325] = true -- Leap of Faith
+--         healingSpells[10060] = true -- Power Infusion
+--         healingSpells[88684] = true -- Holy Word: Serenity (it works!)
+--     ]]
+-- elseif class == "DRUID" then
+--     allowedSpellsSnippet = [[
+--         healingSpells = table.new()
+--         healingSpells[50464] = true -- Nourish
+--         healingSpells[774] = true -- Rejuvenation
+--         healingSpells[8936] = true -- Regrowth
+--         healingSpells[2782] = true -- Remove Corruption
+--         healingSpells[33763] = true -- Lifebloom
+--         healingSpells[5185] = true -- Healing Touch
+--         healingSpells[18562] = true -- Swiftmend
+--         healingSpells[48438] = true -- Wild Growth
+--     ]]
+-- elseif class == "SHAMAN" then
+--     allowedSpellsSnippet = [[
+--         healingSpells = table.new()
+--         healingSpells[331] = true -- Healing Wave
+--         healingSpells[51886] = true -- Cleanse Spirit
+--         healingSpells[8004] = true -- Healing Surge
+--         healingSpells[1064] = true -- Chain Heal
+--         healingSpells[974] = true -- Earth Shield
+--         healingSpells[61295] = true -- Riptide
+--     ]]
+-- elseif class == "PALADIN" then
+--     allowedSpellsSnippet = [[
+--         healingSpells = table.new()
+--         healingSpells[635] = true -- Holy Light
+--         healingSpells[85673] = true -- Word of Glory
+--         healingSpells[19750] = true -- Flash of Light
+--         healingSpells[633] = true -- Lay on Hands
+--         healingSpells[4987] = true -- Cleanse
+--         healingSpells[82326] = true -- Divine Light
+--         healingSpells[85222] = true -- Light of Dawn
+--         healingSpells[53563] = true -- Beacon of Light
+--         healingSpells[20473] = true -- Holy Shock
+--     ]]
+-- else allowedSpellsSnippet = [[ healingSpells = table.new() ]] end
 
 -- local HeaderRangeCheck = function(self,time)
 --     self.OnUpdateCounter = (self.OnUpdateCounter or 0) + time
@@ -240,8 +298,8 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     local header = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
     header:Execute[[ btns = table.new() ]]
 
-    header:Execute([[ healbtns = table.new() ]])
-    header:Execute(allowedSpellsSnippet)
+    -- header:Execute([[ healbtns = table.new() ]])
+    -- header:Execute(allowedSpellsSnippet)
 
 
     -- IsActionInRange has 2nd unit arg, and to support range updates on unit change
@@ -249,24 +307,22 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     -- Or i have to finally make internal range checking
     header:SetAttribute("_onstate-unit",[[
         for healbtn, _ in pairs(healbtns) do
-            -- print("newunit", newstate, healbtn:GetName())
             healbtn:SetAttribute("unit", newstate)
-            -- healbtn:CallMethod("UpdateUsableInRange",true)
         end
     ]])
 
 
-    header:SetAttribute("check_spell", [[
-        local action, index = ...
-        local btn = btns[index]
-        local actionType, spellID = GetActionInfo(action)
-        if actionType == "spell" and healingSpells[spellID] then
-            healbtns[btn] = true
-        else
-            btn:SetAttribute("unit", nil)
-            healbtns[btn] = nil
-        end
-    ]])
+    -- header:SetAttribute("check_spell", [[
+    --     local action, index = ...
+    --     local btn = btns[index]
+    --     local actionType, spellID = GetActionInfo(action)
+    --     if actionType == "spell" and healingSpells[spellID] then
+    --         healbtns[btn] = true
+    --     else
+    --         btn:SetAttribute("unit", nil)
+    --         healbtns[btn] = nil
+    --     end
+    -- ]])
     -- header:SetAttribute("_onstate-visibility",[[
     --     for i,btn in ipairs(btns) do
     --         print(newstate)
@@ -305,7 +361,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
                     btn:Hide()
                 end
             end
-            self:RunAttribute("check_spell", action, i)
+            --self:RunAttribute("check_spell", action, i)
             local animate = not (newstate >= 2 and newstate <= 6)
             btn:CallMethod("Update",true,animate)
             --end
@@ -331,7 +387,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
     header.doremap = doremap
     if doremap then RegisterStateDriver(header, "remap", NugActionBar.MakeStateDriverCondition()) end
     -- RegisterStateDriver(header, "visibility", "[petbattle] hide; show")
-    RegisterStateDriver(header,"unit", "[@mouseover,help,exists,nodead] mouseover; [@target,help,exists,nodead] target; player")
+    -- RegisterStateDriver(header,"unit", "[@mouseover,help,exists,nodead] mouseover; [@target,help,exists,nodead] target; player")
 
     return header
 end
@@ -386,6 +442,7 @@ local GetActionID = function(self)
     local page = self:GetAttribute("actionpage")-1
     return page*12 + self:GetAttribute("action")
 end
+NugActionBar.GetActionID = GetActionID
 
 
 local ButtonOnEvent = function(self,event, ...)
@@ -461,14 +518,42 @@ local ButtonHideGrid = function(btn)
             -- btn:SetAttribute("showgrid", 0)
             btn.normalTexture:SetVertexColor(1.0, 1.0, 1.0, 1);
 end
+
+function NugActionBar.ExtraActionButton(self, header)
+    header:SetAttribute("_onstate-vata", [[
+        print("newstate",newstate)
+        for i,btn in ipairs(btns) do
+            if newstate == 'show'
+                then btn:Show()
+                else btn:Hide()
+            end
+        end
+    ]])
+    RegisterStateDriver(header, "vata", "[extrabar] show; hide")
+    -- local ebf = ExtraActionBarFrame
+    -- ebf:SetParent(UIParent)
+    -- ebf:ClearAllPoints()
+    -- ebf:SetPoint("CENTER", UIParent, 0, -250)
+    -- --ebf.SetPoint = function() end --this is bad
+    -- ebf.ignoreFramePositionManager = true
+    for i, btn in ipairs(header) do
+        btn:SetParent(UIParent)
+        btn:RegisterEvent("UPDATE_EXTRA_ACTIONBAR")
+    end
+end
+
 function NugActionBar.CreateButton(header, rowName, page, index)
     -- local btn = CreateFrame("CheckButton", "NugActionBarButton"..index,header,
                     -- "SecureActionButtonTemplate, ActionButtonTemplate")
     local btn = _G[rowName..index]
     if not btn then return nil end
-    ActionBarActionEventsFrame_UnregisterFrame(btn)
-    ActionBarButtonEventsFrame_UnregisterFrame(btn)
+    -- ActionBarActionEventsFrame_UnregisterFrame(btn)
+    -- ActionBarButtonEventsFrame_UnregisterFrame(btn)
     btn:UnregisterAllEvents()
+    -- if btn.isExtra then
+        -- btn:RegisterEvent("UPDATE_EXTRA_ACTIONBAR")
+    -- end
+
     btn.header = header
     btn:SetAttribute("type", "action");
     btn:SetAttribute("action",index)
@@ -676,6 +761,13 @@ end
 function NugActionBarButton.SPELL_UPDATE_CHARGES(self)
     NugActionBarButton.UpdateCount(self)
 end
+
+local DefaultExtraActionStyle = "Interface\\ExtraButton\\Default";
+function NugActionBarButton.UPDATE_EXTRA_ACTIONBAR(self)
+    local texture = GetOverrideBarSkin() or DefaultExtraActionStyle;
+    self.style:SetTexture(texture);
+    NugActionBarButton.UpdateButton(self, true)
+end
 function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
@@ -733,13 +825,13 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
     if not secure then
         local hdr = self.header
         hdr:SetAttribute("updated_button_index", self.index)
-        hdr:Execute[[
-            local i = self:GetAttribute("updated_button_index")
-            local btn = btns[i]
-            local page = btn:GetAttribute("actionpage")-1
-            local action = page*12 + btn:GetAttribute("action")
-            self:RunAttribute("check_spell",action, i)
-        ]]
+        -- hdr:Execute[[
+        --     local i = self:GetAttribute("updated_button_index")
+        --     local btn = btns[i]
+        --     local page = btn:GetAttribute("actionpage")-1
+        --     local action = page*12 + btn:GetAttribute("action")
+        --     -- self:RunAttribute("check_spell",action, i)
+        -- ]]
     end
 
     local action = GetActionID(self)
@@ -800,6 +892,9 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
     local name = self:GetName()
     local buttonCooldown = self.cooldown
     local texture = GetActionTexture(action)
+    -- if self == ExtraActionButton1 then
+    --     print  ("EAB", texture)
+    -- end
     if ( texture ) then
         self.icon:SetTexture(texture)
         self.icon:Show()
