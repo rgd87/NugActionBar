@@ -1,0 +1,18 @@
+<Bindings>
+	<Binding name="CLICK NugActionBarButton1:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton2:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton3:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton4:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton5:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton6:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton7:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+    <Binding name="CLICK NugActionBarButton8:LeftButton" header="NUGACTIONBAR">
+    </Binding>
+</Bindings>

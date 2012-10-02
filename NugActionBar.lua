@@ -9,6 +9,16 @@ local NugActionBarButton = NugActionBar.Button
 
 NugActionBar:RegisterEvent("ADDON_LOADED")
 
+BINDING_HEADER_NUGACTIONBAR = "NugActionBar"
+_G["BINDING_NAME_CLICK NugActionBarButton1:LeftButton"] = "Nug Action Button 1"
+_G["BINDING_NAME_CLICK NugActionBarButton2:LeftButton"] = "Nug Action Button 2"
+_G["BINDING_NAME_CLICK NugActionBarButton3:LeftButton"] = "Nug Action Button 3"
+_G["BINDING_NAME_CLICK NugActionBarButton4:LeftButton"] = "Nug Action Button 4"
+_G["BINDING_NAME_CLICK NugActionBarButton5:LeftButton"] = "Nug Action Button 5"
+_G["BINDING_NAME_CLICK NugActionBarButton6:LeftButton"] = "Nug Action Button 6"
+_G["BINDING_NAME_CLICK NugActionBarButton7:LeftButton"] = "Nug Action Button 7"
+_G["BINDING_NAME_CLICK NugActionBarButton8:LeftButton"] = "Nug Action Button 8"
+
 local default = {
     hiderighthalf = true,
     movebottomright = true,
@@ -106,6 +116,9 @@ function NugActionBar.ReplaceDefauitActionButtons()
     -- MainMenuBar.Show = function() end
     -- OverrideActionBar:Hide()
     -- OverrideActionBar.Show = function() end
+    -- OverrideActionBar.ignoreFramePositionManager = true
+    -- OverrideActionBar:ClearAllPoints()
+    -- OverrideActionBar:SetPoint("BOTTOM", UIParent, 0, -1000)
     MainMenuBarArtFrame:SetParent(UIParent)
 
     MainMenuBarArtFrame:ClearAllPoints()
@@ -183,6 +196,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
     NugActionBar.headers = {}
     ActionBarButtonEventsFrame:UnregisterAllEvents()
     ActionBarActionEventsFrame:UnregisterAllEvents()
+    ActionBarController:UnregisterAllEvents()
     -- ActionBarButtonEventsFrame_UnregisterFrame = function(frame) --it's new, not overriding anything secure
     --     for i, v in ipairs(ActionBarButtonEventsFrame.frames) do
     --         if v == frame then
@@ -195,8 +209,12 @@ function NugActionBar.ReplaceDefauitActionButtons()
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 4, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 3, nil))
-    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ExtraActionButton", 15, nil))
-    NugActionBar:ExtraActionButton(NugActionBar.headers[6])
+    NugActionBar.CreateActionButtonRow("NugActionBarButton", 8)
+    local nabb_page = select(2,UnitClass("player")) == "DRUID" and 2 or 10
+    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("NugActionBarButton", nabb_page, nil))
+    local extra_header = NugActionBar.CreateHeader("ExtraActionButton", 15, nil)
+    table.insert(NugActionBar.headers, extra_header)
+    NugActionBar:ExtraActionButton(extra_header)
 
     if NugActionBarDB_Character.ShortBar then
         NugActionBar.CreateShortBar(4)
@@ -354,7 +372,9 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
             local page = btn:GetAttribute("actionpage")-1
             local action = page*12 + btn:GetAttribute("action")
             btn:CallMethod("SetActionID",action)
-            if HasAction(action) then
+            -- print("newstate", newstate, action, HasAction(action))
+            if HasAction(action) or page >= 11 then
+                -- HasAction is still returns nil at the point when remaping for vehicleui occurs
                 btn:Show()
             else
                 if self:GetAttribute("showgrid") == 0 then
@@ -399,7 +419,7 @@ local Mappings = {
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
     ["WARLOCK"] = "[form:2] 7;",
-    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [possessbar][vehicleui] 12; ", --[petbattle] 0; 
+    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [overridebar][possessbar][vehicleui] 12; ", --[petbattle] 0; 
 }
 function NugActionBar.MakeStateDriverCondition()
     local class = select(2,UnitClass("player"))
@@ -521,7 +541,6 @@ end
 
 function NugActionBar.ExtraActionButton(self, header)
     header:SetAttribute("_onstate-vata", [[
-        print("newstate",newstate)
         for i,btn in ipairs(btns) do
             if newstate == 'show'
                 then btn:Show()
@@ -530,6 +549,8 @@ function NugActionBar.ExtraActionButton(self, header)
         end
     ]])
     RegisterStateDriver(header, "vata", "[extrabar] show; hide")
+
+    header.isExtra = true
     -- local ebf = ExtraActionBarFrame
     -- ebf:SetParent(UIParent)
     -- ebf:ClearAllPoints()
@@ -539,6 +560,20 @@ function NugActionBar.ExtraActionButton(self, header)
     for i, btn in ipairs(header) do
         btn:SetParent(UIParent)
         btn:RegisterEvent("UPDATE_EXTRA_ACTIONBAR")
+    end
+end
+
+function NugActionBar.CreateActionButtonRow(rowName, n)
+    local prev
+    for i=1,n do
+        local btn = CreateFrame("CheckButton", rowName..i, MainMenuBarArtFrame,
+                    "SecureActionButtonTemplate, ActionButtonTemplate")
+        if not prev then
+            btn:SetPoint("TOPLEFT", MultiBarBottomLeftButton12, "TOPRIGHT", 150,0)
+        else
+            btn:SetPoint("LEFT", prev, "RIGHT", 6,0)
+        end
+        prev = btn
     end
 end
 
@@ -666,9 +701,11 @@ function NugActionBar.ACTIONBAR_SHOWGRID(self,event)
     if InCombatLockdown() then return end
 
     for _, hdr in ipairs(NugActionBar.headers) do
+        if not hdr.isExtra then
         hdr:SetAttribute("showgrid", 1)
         for _, btn in ipairs(hdr) do
             btn:ShowGrid()
+        end
         end
     end
 end
@@ -676,9 +713,11 @@ function NugActionBar.ACTIONBAR_HIDEGRID(self,event)
     if InCombatLockdown() then return end
 
     for _, hdr in ipairs(NugActionBar.headers) do
+        if not hdr.isExtra then
         hdr:SetAttribute("showgrid", 0)
         for _, btn in ipairs(hdr) do
             btn:HideGrid()
+        end
         end
     end
 end
@@ -756,6 +795,15 @@ function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,event, actio
         else
             ActionButton_ShowOverlayGlow(self)
         end
+    elseif ( actionType == "macro" ) then
+            local _, _, spellId = GetMacroSpell(id);
+            if ( spellId and spellId == actionID ) then
+                if autocastOverlay then
+                    AutoCastShine_AutoCastStart(self.acshine)            
+                else
+                    ActionButton_ShowOverlayGlow(self)
+                end
+            end
     end
 end
 function NugActionBarButton.SPELL_UPDATE_CHARGES(self)
@@ -771,10 +819,21 @@ end
 function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actionID)
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
-    if autocastOverlay and ( actionType == "spell" and id == actionID ) then
-        AutoCastShine_AutoCastStop(self.acshine)
-    else
-        ActionButton_HideOverlayGlow(self);
+    if ( actionType == "spell" and id == actionID ) then
+            if autocastOverlay then
+                AutoCastShine_AutoCastStop(self.acshine)
+            else
+                ActionButton_HideOverlayGlow(self);
+            end
+    elseif ( actionType == "macro" ) then
+        local _, _, spellId = GetMacroSpell(id);
+        if (spellId and spellId == actionID ) then
+            if autocastOverlay then
+                AutoCastShine_AutoCastStop(self.acshine)
+            else
+                ActionButton_HideOverlayGlow(self);
+            end
+        end
     end
 end
 
@@ -892,6 +951,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
     local name = self:GetName()
     local buttonCooldown = self.cooldown
     local texture = GetActionTexture(action)
+    -- print(action, texture)
     -- if self == ExtraActionButton1 then
     --     print  ("EAB", texture)
     -- end
