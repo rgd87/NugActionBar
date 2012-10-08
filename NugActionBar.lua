@@ -114,6 +114,19 @@ function NugActionBar.ReplaceDefauitActionButtons()
     -- BonusActionBarFrame.Show = function() end
     -- MainMenuBar:Hide()
     -- MainMenuBar.Show = function() end
+    local prev
+    for i=1,5 do
+        local boss = _G["Boss"..i.."TargetFrame"]
+        if boss then
+            boss.ignoreFramePositionManager = true
+            boss:ClearAllPoints()
+            boss:SetPoint("TOPRIGHT", prev or MinimapCluster, "BOTTOMRIGHT", 0, -50)
+            prev = boss
+        end
+    end
+    -- Boss1TargetFrame.ignoreFramePositionManager = true
+    -- Boss2TargetFrame.ignoreFramePositionManager = true
+    -- Boss3TargetFrame.ignoreFramePositionManager = true
     -- OverrideActionBar:Hide()
     -- OverrideActionBar.Show = function() end
     -- OverrideActionBar.ignoreFramePositionManager = true
@@ -209,7 +222,21 @@ function NugActionBar.ReplaceDefauitActionButtons()
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 4, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 3, nil))
-    NugActionBar.CreateActionButtonRow("NugActionBarButton", 8)
+    local replacebags = true
+    NugActionBar.CreateActionButtonRow("NugActionBarButton", replacebags and 12 or 8)
+    if replacebags then
+        CharacterBag0Slot:ClearAllPoints()
+        CharacterBag0Slot:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 1000, 1000)
+        local prev
+        for i=9,12 do 
+            local btn = _G["NugActionBarButton"..i]
+            btn:SetScale(0.75)
+            if not prev then btn:SetPoint("TOPLEFT", "MainMenuBarBackpackButton", "TOPLEFT", -168,-3)
+            else             btn:SetPoint("TOPLEFT",  prev, "TOPRIGHT", 5.5,0) end
+            prev = btn
+        end
+    end
+
     local nabb_page = select(2,UnitClass("player")) == "DRUID" and 2 or 10
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("NugActionBarButton", nabb_page, nil))
     local extra_header = NugActionBar.CreateHeader("ExtraActionButton", 15, nil)
@@ -376,9 +403,11 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
             if HasAction(action) or page >= 11 then
                 -- HasAction is still returns nil at the point when remaping for vehicleui occurs
                 btn:Show()
+                btn:SetAttribute("statehidden", true)
             else
                 if self:GetAttribute("showgrid") == 0 then
                     btn:Hide()
+                    btn:SetAttribute("statehidden", nil)
                 end
             end
             --self:RunAttribute("check_spell", action, i)
@@ -478,6 +507,7 @@ local ButtonOnDragStart = function(self)
     end
 end
 local ButtonOnReceiveDrag = function(self)
+    if InCombatLockdown() then return end
     PlaceAction(GetActionID(self))
 end
 local UpdateTooltip = function(self)
@@ -502,8 +532,10 @@ function NugActionBar.CreateShortBar(n)
     parent:SetAttribute("_onstate-combat",[[
         if newstate == "combat" then
             self:Show()
+            self:SetAttribute("statehidden", true)
         else
             self:Hide()
+            self:SetAttribute("statehidden", nil)
         end
     ]])
     RegisterStateDriver(parent, "combat", "[combat] combat; nocombat")
@@ -551,12 +583,19 @@ function NugActionBar.ExtraActionButton(self, header)
     RegisterStateDriver(header, "vata", "[extrabar] show; hide")
 
     header.isExtra = true
-    -- local ebf = ExtraActionBarFrame
-    -- ebf:SetParent(UIParent)
-    -- ebf:ClearAllPoints()
-    -- ebf:SetPoint("CENTER", UIParent, 0, -250)
-    -- --ebf.SetPoint = function() end --this is bad
-    -- ebf.ignoreFramePositionManager = true
+
+    local ebf = ExtraActionBarFrame
+    ebf:SetParent(UIParent)
+    ebf:ClearAllPoints()
+    ebf:SetPoint("CENTER", UIParent, 0, -250)
+    ebf.SetPoint = function() end --this is bad
+    ebf.ignoreFramePositionManager = true
+
+    local ppba = PlayerPowerBarAlt
+    ppba:ClearAllPoints()
+    ppba:SetPoint("CENTER", UIParent, 0, -150)
+    ppba.ignoreFramePositionManager = true
+
     for i, btn in ipairs(header) do
         btn:SetParent(UIParent)
         btn:RegisterEvent("UPDATE_EXTRA_ACTIONBAR")
@@ -634,6 +673,7 @@ function NugActionBar.CreateButton(header, rowName, page, index)
         shine:SetScale(1.4)
         btn.acshine = shine
         shine:SetAllPoints(btn)
+        ActionButton_HideOverlayGlow(btn);
     end
 
 
