@@ -11,10 +11,10 @@ function NugActionBar.HideHotkeys()
             border:Hide();  border.Show = function() end;   -- green item border
             
             -- pushed state flash
-            btn:SetPushedTexture([[Interface\Cooldown\star4]])
-            btn:GetPushedTexture():SetBlendMode("ADD")
-            btn:GetPushedTexture():SetTexCoord(0.2,0.8,0.2,0.8)
-            btn:GetPushedTexture():SetVertexColor(0.5,0.5,1)
+            -- btn:SetPushedTexture([[Interface\Cooldown\star4]])
+            -- btn:GetPushedTexture():SetBlendMode("ADD")
+            -- btn:GetPushedTexture():SetTexCoord(0.2,0.8,0.2,0.8)
+            -- btn:GetPushedTexture():SetVertexColor(0.5,0.5,1)
         end
     end
 end
@@ -76,6 +76,13 @@ function NugActionBar.HideRightPart()
 end
 
 function NugActionBar.TrimPetBar()
+    -- local ShowPetActionBar1 = ShowPetActionBar
+    -- ShowPetActionBar = function() return ShowPetActionBar1(false) end
+    -- for i=1,12 do
+        -- local petbtn = _G["PetActionButton"..i]
+        -- if not petbtn then break end
+        -- petbtn:SetParent(MainMenu
+    -- end
     --hide attack follow stay buttons
     PetActionButton1:ClearAllPoints()
     PetActionButton1:SetPoint("TOPLEFT", "ActionButton1", "BOTTOMLEFT", -90, -500);

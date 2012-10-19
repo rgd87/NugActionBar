@@ -103,6 +103,8 @@ function NugActionBar.MoveNewBar(xo,yo)
     end
 end
 
+local MSQ
+local MSQG
 function NugActionBar.ReplaceDefauitActionButtons()
     NugActionBar:RegisterEvent("PLAYER_LOGIN")
     NugActionBar:RegisterEvent("ACTIONBAR_SHOWGRID")
@@ -112,6 +114,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
     -- VehicleMenuBar.Show = function() end
     -- BonusActionBarFrame:Hide()
     -- BonusActionBarFrame.Show = function() end
+    UIParent_ManageFramePositions = function() end -- dunno if it'll help with taint or cause it too
     -- MainMenuBar:Hide()
     -- MainMenuBar.Show = function() end
     local prev
@@ -217,8 +220,14 @@ function NugActionBar.ReplaceDefauitActionButtons()
     --         end
     --     end
     -- end
-    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true))
-    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomLeftButton", 6, nil))
+
+    -- MSQ = LibStub and LibStub("Masque")
+    if MSQ then
+        MSQG = MSQ:Group("NugActionBar", "NABGroup") 
+    end
+
+    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true, nil, MSQG))
+    table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomLeftButton", 6, nil, nil, MSQG))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 4, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 3, nil))
@@ -232,7 +241,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
             local btn = _G["NugActionBarButton"..i]
             btn:SetScale(0.75)
             if not prev then btn:SetPoint("TOPLEFT", "MainMenuBarBackpackButton", "TOPLEFT", -168,-3)
-            else             btn:SetPoint("TOPLEFT",  prev, "TOPRIGHT", 5.5,0) end
+            else             btn:SetPoint("TOPLEFT",  prev, "TOPRIGHT", 6,0) end
             prev = btn
         end
     end
@@ -243,10 +252,11 @@ function NugActionBar.ReplaceDefauitActionButtons()
     table.insert(NugActionBar.headers, extra_header)
     NugActionBar:ExtraActionButton(extra_header)
 
-    if NugActionBarDB_Character.ShortBar then
-        NugActionBar.CreateShortBar(4)
-        table.insert(NugActionBar.headers, NugActionBar.CreateHeader("NugActionBarShortButton", 1, true))
-    end
+    -- if NugActionBarDB_Character.ShortBar then
+        -- NugActionBar.CreateShortBar(4)
+        -- table.insert(NugActionBar.headers, NugActionBar.CreateHeader("NugActionBarShortButton", 1, true))
+    -- end
+
 end
 
 -- function MultiActionBar_Update()
@@ -339,7 +349,7 @@ end
 --         end
 --     end
 -- end
-function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
+function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing, masque_group)
     local header = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
     header:Execute[[ btns = table.new() ]]
 
@@ -411,7 +421,8 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
                 end
             end
             --self:RunAttribute("check_spell", action, i)
-            local animate = not (newstate >= 2 and newstate <= 6)
+            -- local animate = not (newstate >= 2 and newstate <= 6)
+            local animate = true
             btn:CallMethod("Update",true,animate)
             --end
         end
@@ -427,6 +438,9 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing)
         local btn = NugActionBar.CreateButton(header, rowName, page, i)
         if not btn then break end
         header:SetFrameRef("tmpbtn", btn)
+        if masque_group then
+            masque_group:AddButton(btn)
+        end
         header:Execute[[
             local btn = self:GetFrameRef("tmpbtn")
             table.insert(btns,btn)
@@ -447,7 +461,7 @@ local Mappings = {
     ['MONK'] = '[form:1] %s; [form:2] 7;',
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
-    ["WARLOCK"] = "[form:2] 7;",
+    ["WARLOCK"] = "[form:1] 7;",
     ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [overridebar][possessbar][vehicleui] 12; ", --[petbattle] 0; 
 }
 function NugActionBar.MakeStateDriverCondition()
@@ -616,6 +630,8 @@ function NugActionBar.CreateActionButtonRow(rowName, n)
     end
 end
 
+local show_spark = function(self) self.spark:Show() end
+local hide_spark = function(self) self.spark:Hide() end
 function NugActionBar.CreateButton(header, rowName, page, index)
     -- local btn = CreateFrame("CheckButton", "NugActionBarButton"..index,header,
                     -- "SecureActionButtonTemplate, ActionButtonTemplate")
@@ -636,10 +652,41 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     btn:RegisterForDrag("LeftButton", "RightButton");
     btn:RegisterForClicks("AnyUp");
 
-    btn:SetPushedTexture([[Interface\Cooldown\star4]])
-    btn:GetPushedTexture():SetBlendMode("ADD")
-    btn:GetPushedTexture():SetTexCoord(0.2,0.8,0.2,0.8)
-    btn:GetPushedTexture():SetVertexColor(0.5,0.5,1)
+    -- local spark = btn:CreateTexture(nil, "ARTWORK")
+    -- spark:SetTexture([[Interface\Cooldown\star4]])
+    -- spark:Hide()
+    -- spark:SetAllPoints(btn)
+    -- spark:SetBlendMode("ADD")
+    -- spark:SetTexCoord(0.2,0.8,0.2,0.8)
+    -- spark:SetVertexColor(0.5,0.5,1)
+    -- btn.spark = spark
+    -- btn:SetScript("OnKeyDown", show_spark)
+    -- btn:SetScript("OnMouseDown", show_spark)
+    -- btn:SetScript("OnKeyUp", hide_spark)
+    -- btn:SetScript("OnMouseUp", hide_spark)
+    -- btn:SetPushedTexture([[Interface\Cooldown\star4]])
+    -- btn:GetPushedTexture():SetTexCoord(0.2,0.8,0.2,0.8)
+    -- btn:GetPushedTexture():SetVertexColor(0.5,0.5,1)
+    btn:SetPushedTexture("Interface\\AddOns\\NugActionBar\\tPushed")
+    local t = btn:GetPushedTexture()
+    t:SetPoint("TOPLEFT", -15, 15)
+    t:SetPoint("BOTTOMRIGHT", 15, -15)
+
+    btn:SetCheckedTexture("Interface\\AddOns\\NugActionBar\\tChecked")
+    btn:GetCheckedTexture():SetBlendMode("ADD")
+
+    btn:SetHighlightTexture("Interface\\AddOns\\NugActionBar\\tHighlighted")
+    btn:GetHighlightTexture():SetBlendMode("ADD")
+    -- local show1 = t.Show
+    -- t.Show = function(self) print("ASDADS"); show1(self) end
+    -- local spark = btn:CreateTexture(nil, "ARTWORK")
+    -- spark:SetParent(t)
+    -- spark:SetTexture([[Interface\Cooldown\star4]])
+    -- -- spark:Hide()
+    -- spark:SetAllPoints(btn)
+    -- spark:SetBlendMode("ADD")
+    -- spark:SetTexCoord(0.2,0.8,0.2,0.8)
+    -- spark:SetVertexColor(0.5,0.5,1)
 
     btn.count = _G[btn:GetName().."Count"]
     btn.icon = _G[btn:GetName().."Icon"]
@@ -653,12 +700,14 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     btn.index = index
     -- btn:Show()
 
+    btn.icon:SetTexCoord(0.03, 0.97, 0.03, 0.97)
+
     btn:SetScript("OnDragStart",ButtonOnDragStart)
     btn:SetScript("OnReceiveDrag",ButtonOnReceiveDrag)
     btn:SetScript("OnEnter",ButtonOnEnter)
     btn:SetScript("OnLeave",ButtonOnLeave)
     btn:SetScript("OnUpdate",ActionButton_OnUpdate)
-    btn:SetScript("PostClick", NugActionBar.ACTIONBAR_UPDATE_STATE )
+    btn:SetScript("PostClick", NugActionBarButton.ACTIONBAR_UPDATE_STATE )
 
     btn:SetScript("OnEvent",ButtonOnEvent)
     btn:SetScript("OnAttributeChanged",nil)
@@ -677,7 +726,8 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     end
 
 
-    local t = header:CreateTexture(nil, "BACKGROUND", nil, 1)
+    local t = btn:CreateTexture(nil, "BACKGROUND", nil, 1)
+    t:SetTexCoord(btn.icon:GetTexCoord())
     t:SetAllPoints(btn.icon)
     t:SetAlpha(0)
     btn.oldicon = t
@@ -689,7 +739,7 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     a1:SetOrder(1)
     local a2 = ag:CreateAnimation("Alpha")
     a2:SetChange(-1)
-    a2:SetDuration(0.4)
+    a2:SetDuration(0.2)
     a2:SetOrder(2)
     ag:SetScript("OnFinished",function(self)
         self:GetParent():SetAlpha(0)
@@ -998,7 +1048,8 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
     if ( texture ) then
         self.icon:SetTexture(texture)
         self.icon:Show()
-        self:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
+        -- self:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
+        self:SetNormalTexture("Interface\\AddOns\\NugActionBar\\tNormal")
     else
         self.icon:SetTexture(nil)
         icon:Hide();
