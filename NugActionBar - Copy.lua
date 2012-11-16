@@ -37,7 +37,7 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
     NugActionBarDB_Character = NugActionBarDB_Character or {}
     NugActionBarDB_Global = NugActionBarDB_Global or {}
     db = setmetatable(NugActionBarDB_Global, { __index = default } )
-
+    
     NugActionBar.HideHotkeys()
 
     if db.movebottomright then
@@ -49,9 +49,7 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
     if db.hiderighthalf then
         NugActionBar.HideRightPart()
     end
-
     if db.changeoverlay then autocastOverlay = true end
-
     if db.replacedefault then
         NugActionBar.ReplaceDefauitActionButtons()
     end
@@ -93,14 +91,8 @@ NugActionBar.SlashCmd = function(msg)
         db.x = tonumber(v)
         NugActionBar.MoveNewBar(db.x,0)
     end
-    if k == "readybar" then
-        NugActionBarDB_Character.ReadyBar = not NugActionBarDB_Character.ReadyBar 
-    end 
-    if k == "readyunlock" then
-        NugActionBar:EnableMouseOnReadyBar(true)
-    end
-    if k == "readylock" then
-        NugActionBar:EnableMouseOnReadyBar(false)
+    if k == "shortbar" then
+        NugActionBarDB_Character.ShortBar = not NugActionBarDB_Character.ShortBar 
     end
 end
 
@@ -230,9 +222,9 @@ function NugActionBar.ReplaceDefauitActionButtons()
     -- end
 
     -- MSQ = LibStub and LibStub("Masque")
-    -- if MSQ then
-        -- MSQG = MSQ:Group("NugActionBar", "NABGroup") 
-    -- end
+    if MSQ then
+        MSQG = MSQ:Group("NugActionBar", "NABGroup") 
+    end
 
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true, nil, MSQG))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomLeftButton", 6, nil, nil, MSQG))
@@ -260,9 +252,10 @@ function NugActionBar.ReplaceDefauitActionButtons()
     table.insert(NugActionBar.headers, extra_header)
     NugActionBar:ExtraActionButton(extra_header)
 
-    if NugActionBarDB_Character.ReadyBar then
-        table.insert(NugActionBar.headers, NugActionBar:CreateReadyBar(4))
-    end
+    -- if NugActionBarDB_Character.ShortBar then
+        -- NugActionBar.CreateShortBar(4)
+        -- table.insert(NugActionBar.headers, NugActionBar.CreateHeader("NugActionBarShortButton", 1, true))
+    -- end
 
 end
 
@@ -486,6 +479,7 @@ function NugActionBar.MakeStateDriverCondition()
     return Mappings.BASE .. special .. " 1"
 end
 
+
 function NugActionBar.PLAYER_LOGIN(self,event, arg1)
     useTullaRange = IsAddOnLoaded("tullaRange")
     if useTullaRange then
@@ -547,53 +541,28 @@ local ButtonOnLeave = function(self)
     ActionButton_UpdateFlyout(self)
 end
 
-function NugActionBar:CreateReadyBar(n)
-    NugActionBar.CreateActionButtonRow("NugActionBarReadyButton", n)
-    local hdr = NugActionBar.CreateHeader("NugActionBarReadyButton", 9, nil, nil)
-    hdr:SetAttribute("_onstate-visib",[[
-        for i,btn in ipairs(btns) do
-            local page = btn:GetAttribute("actionpage")-1
-            local action = page*12 + btn:GetAttribute("action")
-            if newstate == "show" and HasAction(action) then
-                btn:Show()
-            else btn:Hide()
-            end
+function NugActionBar.CreateShortBar(n)
+    local parent = CreateFrame("Frame","NugActionBarShortFrame",UIParent, "SecureHandlerStateTemplate")
+    parent:SetAttribute("_onstate-combat",[[
+        if newstate == "combat" then
+            self:Show()
+            self:SetAttribute("statehidden", true)
+        else
+            self:Hide()
+            self:SetAttribute("statehidden", nil)
         end
     ]])
-    RegisterStateDriver(hdr, "visib", "[combat] show; hide")
-    hdr:RegisterEvent("PLAYER_ENTERING_ZONE")
-    hdr:SetScript("OnEvent", function(self, event)
-        if not InCombatLockdown() then self:SetAttribute("state-visib", "hide") end
-    end)
-    local prev
-    for i=1,12 do
-        local btn = _G["NugActionBarReadyButton"..i]
-        if not btn then break end
-
-        btn:ClearAllPoints()
-        if not prev then
-            -- btn:SetPoint("TOPLEFT", UIParent, "CENTER", 240, 135)
-            btn:SetPoint("TOPLEFT", UIParent, "CENTER", 240, 60)
-        else
-            btn:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -6)
-        end
+    RegisterStateDriver(parent, "combat", "[combat] combat; nocombat")
+    parent:SetWidth(10)
+    parent:SetHeight(10)
+    parent:SetScale(0.8)
+    parent:SetPoint("CENTER",UIParent,"CENTER",170,-50)
+    local prev = parent
+    for index=1,n do
+        local btn = CreateFrame("CheckButton", "NugActionBarShortButton"..index,parent,
+                    "SecureActionButtonTemplate, ActionBarButtonTemplate")
+        btn:SetPoint("LEFT",prev,"RIGHT",6,0)
         prev = btn
-
-        btn:SetScale(.8)
-        btn.isReadyButton = true
-        -- btn.desaturate = true
-        btn.fade = true
-        btn:EnableMouse(false)
-    end
-    return hdr
-end
-function NugActionBar:EnableMouseOnReadyBar(s)
-    if InCombatLockdown() then return print("Can't unlock in combat") end
-    for i=1,12 do
-        local btn = _G["NugActionBarReadyButton"..i]
-        if not btn then break end
-        btn:EnableMouse(s)
-        if s then btn:Show() else btn:Hide() end
     end
 end
 
@@ -756,6 +725,7 @@ function NugActionBar.CreateButton(header, rowName, page, index)
         ActionButton_HideOverlayGlow(btn);
     end
 
+
     local t = btn:CreateTexture(nil, "BACKGROUND", nil, 1)
     t:SetTexCoord(btn.icon:GetTexCoord())
     t:SetAllPoints(btn.icon)
@@ -864,47 +834,11 @@ function NugActionBarButton.ACTIONBAR_UPDATE_STATE(self,event)
         self:SetChecked(0)
     end
 end
-
-local ReadyCooldownOnUpdate = function(self, time)
-    if GetTime() >= self.cooldownEndTime then
-        self:SetScript("OnUpdate", nil)
-        NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self)
-    end
-end
-local function ReadyCooldownFrame_SetTimer(frame, self, start, duration, enable, charges, maxCharges)
-    if ( start and start > 0 and duration > 1.5 and enable > 0 ) then
-        self:SetCooldown(start, duration, 0,0);
-        -- self:SetCooldown(start, duration, charges, maxCharges);
-        if (maxCharges == 0) or (maxCharges > 0 and charges == 0) then
-            if frame.desaturate then
-                frame.icon:SetDesaturated(true)
-            end
-            if frame.fade then
-                frame:SetAlpha(0.5)
-            end
-        else
-            frame.icon:SetDesaturated(false)
-            frame:SetAlpha(1)
-        end
-        frame.cooldownEndTime = start + duration
-        frame:SetScript("OnUpdate", ReadyCooldownOnUpdate)
-        self:Show();
-    else
-        frame.icon:SetDesaturated(false)
-        frame:SetAlpha(1)
-        self:Hide();
-    end
-end
 function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
     local action = GetActionID(self)
     local cooldown = self.cooldown
-    local start, duration, enable, charges, maxCharges = GetActionCooldown(action);
-    if self.isReadyButton then
-        ReadyCooldownFrame_SetTimer(self, cooldown, start, duration, enable, charges, maxCharges);
-    else
-        -- CooldownFrame_SetTimer(cooldown, start, duration, enable, charges, maxCharges);
-        CooldownFrame_SetTimer(cooldown, start, duration, enable, 0, 0);
-    end
+    local start, duration, enable = GetActionCooldown(action);
+    CooldownFrame_SetTimer(cooldown, start, duration, enable);
 end
 function NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self,event, inRange)
     local action = GetActionID(self)
@@ -995,7 +929,6 @@ end
 
 
 
-
 function NugActionBarButton.UpdateSpellActivationOverlay(self)
     local action = GetActionID(self)
     local spellType, id, subType  = GetActionInfo(action)
@@ -1069,7 +1002,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self)
         NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self)
 
-        if not secure and not self.isReadyButton then self:Show() end
+        if not secure then self:Show() end
     else
         self:UnregisterEvent("ACTIONBAR_UPDATE_STATE")
         self:UnregisterEvent("ACTIONBAR_UPDATE_USABLE")
