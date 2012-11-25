@@ -67,7 +67,7 @@ function NugActionBar.HideRightPart()
     ActionBarDownButton:Hide()
     ActionBarUpButton:Hide()
     MainMenuBarPageNumber:Hide()
---~     MainMenuBarLeftEndCap:Hide()
+    MainMenuBarLeftEndCap:Hide()
 --~     MainMenuBarRightEndCap:Hide()
     MainMenuBarRightEndCap:SetPoint("BOTTOMLEFT", MainMenuBarArtFrame,"BOTTOMRIGHT" , -543, 0) 
     

@@ -20,7 +20,7 @@ _G["BINDING_NAME_CLICK NugActionBarButton7:LeftButton"] = "Nug Action Button 7"
 _G["BINDING_NAME_CLICK NugActionBarButton8:LeftButton"] = "Nug Action Button 8"
 
 local default = {
-    hiderighthalf = true,
+    -- hiderighthalf = true,
     movebottomright = true,
     replacedefault = true,
     changeoverlay = false,
@@ -46,7 +46,7 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
         NugActionBar.TrimPetBar()
     end
 
-    if db.hiderighthalf then
+    if NugActionBarDB_Character.hiderighthalf then
         NugActionBar.HideRightPart()
     end
 
@@ -71,6 +71,8 @@ NugActionBar.SlashCmd = function(msg)
       |cff00ff00/nab|r hiderighthalf
       |cff00ff00/nab|r replacedefault
       |cff00ff00/nab|r changeoverlay
+      |cff00ff00/nab|r readybar
+      |cff00ff00/nab|r readyunlock
       |cff00ff00/nab|r move X]]
     )end
     if k == "movebottomright" then
@@ -80,7 +82,7 @@ NugActionBar.SlashCmd = function(msg)
         NugActionBar.TrimPetBar()
     end
     if k == "hiderighthalf" then
-        db.hiderighthalf = not db.hiderighthalf
+        NugActionBarDB_Character.hiderighthalf = not NugActionBarDB_Character.hiderighthalf
         NugActionBar.HideRightPart()
     end
     if k == "replacedefault" then
@@ -239,6 +241,8 @@ function NugActionBar.ReplaceDefauitActionButtons()
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 4, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 3, nil))
+    
+  if not NugActionBarDB_Character.hiderighthalf then
     local replacebags = true
     NugActionBar.CreateActionButtonRow("NugActionBarButton", replacebags and 12 or 8)
     if replacebags then
@@ -256,12 +260,16 @@ function NugActionBar.ReplaceDefauitActionButtons()
 
     local nabb_page = select(2,UnitClass("player")) == "DRUID" and 2 or 10
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("NugActionBarButton", nabb_page, nil))
+  end
+
     local extra_header = NugActionBar.CreateHeader("ExtraActionButton", 15, nil)
     table.insert(NugActionBar.headers, extra_header)
     NugActionBar:ExtraActionButton(extra_header)
 
     if NugActionBarDB_Character.ReadyBar then
-        table.insert(NugActionBar.headers, NugActionBar:CreateReadyBar(4))
+        NugActionBar.ReadyBarHeader = NugActionBar:CreateReadyBar(12)
+        table.insert(NugActionBar.headers, NugActionBar.ReadyBarHeader)
+        NugActionBar:CreateCustomOverlay()
     end
 
 end
@@ -417,14 +425,19 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing, mas
             local action = page*12 + btn:GetAttribute("action")
             btn:CallMethod("SetActionID",action)
             -- print("newstate", newstate, action, HasAction(action))
-            if HasAction(action) or page >= 11 then
+            if HasAction(action) then
                 -- HasAction is still returns nil at the point when remaping for vehicleui occurs
                 btn:Show()
+                btn:SetAlpha(1)
                 btn:SetAttribute("statehidden", true)
             else
                 if self:GetAttribute("showgrid") == 0 then
-                    btn:Hide()
-                    btn:SetAttribute("statehidden", nil)
+                    if page >= 11 then
+                        btn:SetAlpha(0)
+                    else
+                        btn:Hide()
+                        btn:SetAttribute("statehidden", nil)
+                    end
                 end
             end
             --self:RunAttribute("check_spell", action, i)
@@ -469,7 +482,8 @@ local Mappings = {
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
     ["WARLOCK"] = "[form:1] 7;",
-    ["BASE"] = "[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [overridebar][possessbar][vehicleui] 12; ", --[petbattle] 0; 
+    ["BASE"] = string.format("[bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6; [overridebar] %d; [possessbar][vehicleui] %d; ",
+                                GetOverrideBarIndex(), GetVehicleBarIndex())
 }
 function NugActionBar.MakeStateDriverCondition()
     local class = select(2,UnitClass("player"))
@@ -566,7 +580,7 @@ function NugActionBar:CreateReadyBar(n)
         if not InCombatLockdown() then self:SetAttribute("state-visib", "hide") end
     end)
     local prev
-    for i=1,12 do
+    for i=1,6 do
         local btn = _G["NugActionBarReadyButton"..i]
         if not btn then break end
 
@@ -585,6 +599,27 @@ function NugActionBar:CreateReadyBar(n)
         btn.fade = true
         btn:EnableMouse(false)
     end
+
+    prev = nil
+    for i=7,12 do
+        local btn = _G["NugActionBarReadyButton"..i]
+        if not btn then break end
+
+        btn:ClearAllPoints()
+        if not prev then
+            btn:SetPoint("TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 128, 98)
+        else
+            btn:SetPoint("TOPLEFT", prev, "TOPRIGHT", 6, 0)
+        end
+        prev = btn
+
+        btn:SetScale(.75)
+        btn.isReadyButton = true
+        -- btn.desaturate = true
+        btn.fade = true
+        btn:EnableMouse(false)
+    end
+
     return hdr
 end
 function NugActionBar:EnableMouseOnReadyBar(s)
@@ -787,17 +822,19 @@ function NugActionBar.CreateLeaveButton(self)
     f:SetPoint("RIGHT",ActionButton1,"LEFT",-10,0)
     f:SetFrameStrata("HIGH")
     f:SetScript("OnClick",VehicleExit)
-    if UnitInVehicle("player") then f:Show() else f:Hide() end
+    -- if UnitInVehicle("player") then f:Show() else f:Hide() end
 
-    f:SetScript("OnEvent", function(self,event, unit)
-        if event == "UNIT_ENTERED_VEHICLE" and unit == "player" then
-            self:Show()
-        else
-            self:Hide()
-        end
-    end)
-    f:RegisterEvent("UNIT_ENTERED_VEHICLE")
-    f:RegisterEvent("UNIT_EXITED_VEHICLE")
+    RegisterStateDriver(f, "visibility", "[overridebar][vehicleui][possessbar,@vehicle,exists] show; hide")
+
+    -- f:SetScript("OnEvent", function(self,event, unit)
+        -- if event == "UNIT_ENTERED_VEHICLE" and unit == "player" then
+            -- self:Show()
+        -- else
+            -- self:Hide()
+        -- end
+    -- end)
+    -- f:RegisterEvent("UNIT_ENTERED_VEHICLE")
+    -- f:RegisterEvent("UNIT_EXITED_VEHICLE")
 
     MainMenuBarVehicleLeaveButton:Hide()
     MainMenuBarVehicleLeaveButton.Show = function() end
@@ -942,23 +979,30 @@ function NugActionBarButton.STOP_AUTOREPEAT_SPELL(self,event)
         ActionButton_StopFlash(self)
     end
 end
+
+function NugActionBarButton.ShowOverlayGlow(self)
+    if autocastOverlay then
+        AutoCastShine_AutoCastStart(self.acshine)            
+    else
+        ActionButton_ShowOverlayGlow(self)
+    end
+end
+function NugActionBarButton.HideOverlayGlow(self)
+    if autocastOverlay then
+        AutoCastShine_AutoCastStop(self.acshine)
+    else
+        ActionButton_HideOverlayGlow(self);
+    end
+end
 function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,event, actionID)
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
     if ( actionType == "spell" and id == actionID ) then
-        if autocastOverlay then
-            AutoCastShine_AutoCastStart(self.acshine)            
-        else
-            ActionButton_ShowOverlayGlow(self)
-        end
+        NugActionBarButton.ShowOverlayGlow(self)
     elseif ( actionType == "macro" ) then
             local _, _, spellId = GetMacroSpell(id);
             if ( spellId and spellId == actionID ) then
-                if autocastOverlay then
-                    AutoCastShine_AutoCastStart(self.acshine)            
-                else
-                    ActionButton_ShowOverlayGlow(self)
-                end
+                NugActionBarButton.ShowOverlayGlow(self)
             end
     end
 end
@@ -976,24 +1020,14 @@ function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actio
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
     if ( actionType == "spell" and id == actionID ) then
-            if autocastOverlay then
-                AutoCastShine_AutoCastStop(self.acshine)
-            else
-                ActionButton_HideOverlayGlow(self);
-            end
+            NugActionBarButton.HideOverlayGlow(self)
     elseif ( actionType == "macro" ) then
         local _, _, spellId = GetMacroSpell(id);
         if (spellId and spellId == actionID ) then
-            if autocastOverlay then
-                AutoCastShine_AutoCastStop(self.acshine)
-            else
-                ActionButton_HideOverlayGlow(self);
-            end
+            NugActionBarButton.HideOverlayGlow(self)
         end
     end
 end
-
-
 
 
 function NugActionBarButton.UpdateSpellActivationOverlay(self)
@@ -1069,7 +1103,10 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self)
         NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self)
 
-        if not secure and not self.isReadyButton then self:Show() end
+        if not self.isReadyButton then
+            if not secure then self:Show() end
+            self:SetAlpha(1)
+        end
     else
         self:UnregisterEvent("ACTIONBAR_UPDATE_STATE")
         self:UnregisterEvent("ACTIONBAR_UPDATE_USABLE")
@@ -1131,4 +1168,64 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
     -- else
     --     actionText:SetText("");
     -- end
+end
+
+-- 12294 ms
+-- 23881 bt
+-- bersrage overlay 
+function NugActionBar.CreateCustomOverlay(self)
+    local overlay_check
+    local f = CreateFrame("Frame")
+
+    local _, class = UnitClass("player")
+    if class == "WARRIOR" then
+        local min, max, spellID
+        local enrageSpellName = GetSpellInfo(12880)
+        f:RegisterEvent("SPELLS_CHANGED")
+        f:SetScript("OnEvent", function(self)
+                if IsPlayerSpell(12294) then spellID, max = 12294, 5.5
+                elseif IsPlayerSpell(23881) then spellID, max = 23881, 4
+                else spellID = nil end
+            end)
+        local function BerserkerRage()
+            if not spellID then return end
+            local startTime, duration, enabled = GetSpellCooldown(spellID)
+            local _, brcd = GetSpellCooldown(18499)
+            local cd = 0
+            if duration > 0 then
+                cd = startTime + duration - GetTime()
+            end
+
+            return 18499, (cd > 2.5 and cd < max and brcd == 0 and not UnitBuff("player", enrageSpellName))
+        end
+
+        overlay_check = BerserkerRage
+    end
+
+    local expired = 0
+    local state = {}
+    f:SetScript("OnUpdate", function(self, time)
+        expired = expired + time
+        if expired < .5 then return end
+        expired = 0
+
+        local spellID, status = overlay_check()
+        if spellID and status ~= state[spellID] then
+            state[spellID] = status
+
+            for _, btn in ipairs(NugActionBar.ReadyBarHeader) do
+                local action = GetActionID(btn)
+                local actionType, id, subType = GetActionInfo(action);
+                if id == spellID then
+                    if status then
+                        NugActionBarButton.ShowOverlayGlow(btn)
+                    else
+                        NugActionBarButton.HideOverlayGlow(btn)
+                    end
+                end
+            end
+        end
+    end)
+
+
 end
