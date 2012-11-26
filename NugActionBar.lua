@@ -44,6 +44,14 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
         NugActionBar.MoveBottomRightBar()
         NugActionBar.HideShapeshiftBar()
         NugActionBar.TrimPetBar()
+
+        --disable expbar
+        ReputationWatchBar:UnregisterAllEvents()
+        ReputationWatchBar:Hide()
+        MainMenuExpBar:Hide();
+        MainMenuExpBar.pauseUpdates = true;
+        MainMenuBarMaxLevelBar:Show();
+        ExhaustionTick:Hide();
     end
 
     if NugActionBarDB_Character.hiderighthalf then
@@ -1201,6 +1209,7 @@ function NugActionBar.CreateCustomOverlay(self)
 
         overlay_check = BerserkerRage
     end
+    if not overlay_check then return end
 
     local expired = 0
     local state = {}
