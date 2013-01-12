@@ -569,6 +569,37 @@ local ButtonOnLeave = function(self)
     ActionButton_UpdateFlyout(self)
 end
 
+function NugActionBar:AlignReadyButtons(name, s, e, growth, gap, scale, point, frame, relative_point, x,y)
+    local prev
+
+    local p, rp, xgap, ygap
+    if      growth == "DOWN" then p, rp, xgap, ygap = "TOPLEFT", "BOTTOMLEFT", 0, -gap
+    elseif  growth == "UP" then p, rp, xgap, ygap = "BOTTOMLEFT", "TOPLEFT", 0, gap
+    elseif  growth == "RIGHT" then p, rp, xgap, ygap = "TOPLEFT", "TOPRIGHT", gap, 0
+    elseif  growth == "LEFT" then p, rp, xgap, ygap = "TOPRIGHT", "TOPLEFT", -gap, 0
+    end
+    if not p then return end
+
+    for i=s,e do
+        local btn = _G[name..i]
+        if not btn then break end
+
+        btn:ClearAllPoints()
+        if not prev then
+            btn:SetPoint(point, frame, relative_point, x, y)
+        else
+            btn:SetPoint(p, prev, rp, xgap, ygap)
+        end
+        prev = btn
+
+        btn:SetScale(scale)
+        btn.isReadyButton = true
+        -- btn.desaturate = true
+        btn.fade = true
+        btn:EnableMouse(false)
+    end
+end
+
 function NugActionBar:CreateReadyBar(n)
     NugActionBar.CreateActionButtonRow("NugActionBarReadyButton", n)
     local hdr = NugActionBar.CreateHeader("NugActionBarReadyButton", 9, nil, nil)
@@ -587,46 +618,30 @@ function NugActionBar:CreateReadyBar(n)
     hdr:SetScript("OnEvent", function(self, event)
         if not InCombatLockdown() then self:SetAttribute("state-visib", "hide") end
     end)
-    local prev
-    for i=1,6 do
-        local btn = _G["NugActionBarReadyButton"..i]
-        if not btn then break end
 
-        btn:ClearAllPoints()
-        if not prev then
-            -- btn:SetPoint("TOPLEFT", UIParent, "CENTER", 240, 135)
-            btn:SetPoint("TOPLEFT", UIParent, "CENTER", 240, 60)
-        else
-            btn:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -6)
-        end
-        prev = btn
 
-        btn:SetScale(.8)
-        btn.isReadyButton = true
-        -- btn.desaturate = true
-        btn.fade = true
-        btn:EnableMouse(false)
-    end
+    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 1, 5,
+                                    "DOWN", 6, .8,
+                                    "TOPLEFT", UIParent, "CENTER", 250, 90)
 
-    prev = nil
-    for i=7,12 do
-        local btn = _G["NugActionBarReadyButton"..i]
-        if not btn then break end
+    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 6, 10,
+                                    "DOWN", 6, .8,
+                                    "TOPRIGHT", "NugActionBarReadyButton1", "TOPLEFT", -6, 0)
 
-        btn:ClearAllPoints()
-        if not prev then
-            btn:SetPoint("TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 128, 98)
-        else
-            btn:SetPoint("TOPLEFT", prev, "TOPRIGHT", 6, 0)
-        end
-        prev = btn
+    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 5, 6,
+    --                                 "DOWN", 6, .8,
+    --                                 "TOPRIGHT", "NugActionBarReadyButton1", "TOPLEFT", -6, 0)
 
-        btn:SetScale(.75)
-        btn.isReadyButton = true
-        -- btn.desaturate = true
-        btn.fade = true
-        btn:EnableMouse(false)
-    end
+
+    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 11, 12,
+                                    "RIGHT", 6, 1.1,
+                                    "TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 380, 120)--115)
+
+
+    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 9, 12,
+    --                                 "RIGHT", 6, .8,
+    --                                 "BOTTOMLEFT", NugActionBarReadyButton7, "TOPLEFT", 0, 10)
+
 
     return hdr
 end
@@ -675,13 +690,13 @@ function NugActionBar.ExtraActionButton(self, header)
     local ebf = ExtraActionBarFrame
     ebf:SetParent(UIParent)
     ebf:ClearAllPoints()
-    ebf:SetPoint("CENTER", UIParent, 0, -250)
+    ebf:SetPoint("CENTER", UIParent, 220, -320)
     ebf.SetPoint = function() end --this is bad
     ebf.ignoreFramePositionManager = true
 
     local ppba = PlayerPowerBarAlt
     ppba:ClearAllPoints()
-    ppba:SetPoint("CENTER", UIParent, 0, -150)
+    ppba:SetPoint("CENTER", UIParent, 0, -100)
     ppba.ignoreFramePositionManager = true
 
     for i, btn in ipairs(header) do
@@ -832,7 +847,7 @@ function NugActionBar.CreateLeaveButton(self)
     f:SetScript("OnClick",VehicleExit)
     -- if UnitInVehicle("player") then f:Show() else f:Hide() end
 
-    RegisterStateDriver(f, "visibility", "[overridebar][vehicleui][possessbar,@vehicle,exists] show; hide")
+    RegisterStateDriver(f, "visibility", "[overridebar][vehicleui][possessbar,@vehicle,exists][@vehicle,exists] show; hide")
 
     -- f:SetScript("OnEvent", function(self,event, unit)
         -- if event == "UNIT_ENTERED_VEHICLE" and unit == "player" then
@@ -925,7 +940,7 @@ local function ReadyCooldownFrame_SetTimer(frame, self, start, duration, enable,
                 frame.icon:SetDesaturated(true)
             end
             if frame.fade then
-                frame:SetAlpha(0.5)
+                frame:SetAlpha(0.3)
             end
         else
             frame.icon:SetDesaturated(false)
@@ -988,29 +1003,29 @@ function NugActionBarButton.STOP_AUTOREPEAT_SPELL(self,event)
     end
 end
 
-function NugActionBarButton.ShowOverlayGlow(self)
-    if autocastOverlay then
-        AutoCastShine_AutoCastStart(self.acshine)            
-    else
+function NugActionBarButton.ShowOverlayGlow(self, defaultOverlay)
+    if defaultOverlay then
         ActionButton_ShowOverlayGlow(self)
+    else
+        AutoCastShine_AutoCastStart(self.acshine)
     end
 end
-function NugActionBarButton.HideOverlayGlow(self)
-    if autocastOverlay then
-        AutoCastShine_AutoCastStop(self.acshine)
+function NugActionBarButton.HideOverlayGlow(self, defaultOverlay)
+    if defaultOverlay then
+        ActionButton_HideOverlayGlow(self)
     else
-        ActionButton_HideOverlayGlow(self);
+        AutoCastShine_AutoCastStop(self.acshine)
     end
 end
 function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(self,event, actionID)
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
     if ( actionType == "spell" and id == actionID ) then
-        NugActionBarButton.ShowOverlayGlow(self)
+        NugActionBarButton.ShowOverlayGlow(self, not autocastOverlay)
     elseif ( actionType == "macro" ) then
             local _, _, spellId = GetMacroSpell(id);
             if ( spellId and spellId == actionID ) then
-                NugActionBarButton.ShowOverlayGlow(self)
+                NugActionBarButton.ShowOverlayGlow(self, not autocastOverlay)
             end
     end
 end
@@ -1028,11 +1043,11 @@ function NugActionBarButton.SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(self,event, actio
     local action = GetActionID(self)
     local actionType, id, subType = GetActionInfo(action);
     if ( actionType == "spell" and id == actionID ) then
-            NugActionBarButton.HideOverlayGlow(self)
+            NugActionBarButton.HideOverlayGlow(self, not autocastOverlay)
     elseif ( actionType == "macro" ) then
         local _, _, spellId = GetMacroSpell(id);
         if (spellId and spellId == actionID ) then
-            NugActionBarButton.HideOverlayGlow(self)
+            NugActionBarButton.HideOverlayGlow(self, not autocastOverlay)
         end
     end
 end
@@ -1098,6 +1113,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         self:RegisterEvent("ACTIONBAR_UPDATE_STATE")
         self:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
         self:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+        self:UnregisterEvent("LOSS_OF_CONTROL_UPDATE") --!!!!
         -- self:RegisterEvent("UPDATE_INVENTORY_ALERTS")
         -- self:RegisterEvent("PLAYER_TARGET_CHANGED")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
@@ -1119,6 +1135,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         self:UnregisterEvent("ACTIONBAR_UPDATE_STATE")
         self:UnregisterEvent("ACTIONBAR_UPDATE_USABLE")
         self:UnregisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+        self:UnregisterEvent("LOSS_OF_CONTROL_UPDATE")
         -- self:UnregisterEvent("UPDATE_INVENTORY_ALERTS")
         -- self:UnregisterEvent("PLAYER_TARGET_CHANGED")
         self:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
@@ -1183,39 +1200,92 @@ end
 -- bersrage overlay 
 function NugActionBar.CreateCustomOverlay(self)
     local overlay_check
+    local check_interval = .3
     local f = CreateFrame("Frame")
+    f:SetScript("OnEvent", function(self, event, ...)
+        return self[event](self, event, ...)
+    end)
 
     local _, class = UnitClass("player")
     if class == "WARRIOR" then
-        local min, max, spellID
+        local startTime, endTime = 0, 0.1
+        -- local min, max, spellID
+        local GetSpellCooldown = GetSpellCooldown
+        local UnitBuff = UnitBuff
         local enrageSpellName = GetSpellInfo(12880)
-        f:RegisterEvent("SPELLS_CHANGED")
-        f:SetScript("OnEvent", function(self)
-                if IsPlayerSpell(12294) then spellID, max = 12294, 5.5
-                elseif IsPlayerSpell(23881) then spellID, max = 23881, 4
-                else spellID = nil end
-            end)
-        local function BerserkerRage()
-            if not spellID then return end
-            local startTime, duration, enabled = GetSpellCooldown(spellID)
-            local _, brcd = GetSpellCooldown(18499)
-            local cd = 0
-            if duration > 0 then
-                cd = startTime + duration - GetTime()
+        -- f:RegisterEvent("SPELLS_CHANGED")
+        f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+
+        local COMBATLOG_OBJECT_AFFILIATION_MINE = COMBATLOG_OBJECT_AFFILIATION_MINE
+        local bit_band = bit.band
+        function f.COMBAT_LOG_EVENT_UNFILTERED( self, event, timestamp, eventType, hideCaster,
+                srcGUID, srcName, srcFlags, srcFlags2,
+                dstGUID, dstName, dstFlags, dstFlags2,
+                spellID, spellName, spellSchool, ...)
+            local amount, overkill, _, _, _, _, critical = ...
+            local isSrcPlayer = (bit_band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE)
+            if (spellID == 12294 or spellID == 23881) and isSrcPlayer and eventType == "SPELL_DAMAGE" then
+                if not critical then
+                    local now = GetTime()
+                    startTime = now
+                    endTime = now + (spellID == 12294 and 3 or 2)
+                end
             end
-
-            return 18499, (cd > 2.5 and cd < max and brcd == 0 and not UnitBuff("player", enrageSpellName))
         end
+        -- f:SetScript("OnEvent", function(self)
+        --         if IsPlayerSpell(12294) then spellID, max = 12294, 5.5
+        --         elseif IsPlayerSpell(23881) then spellID, max = 23881, 4
+        --         else spellID = nil end
+        --     end)
+        -- local function BerserkerRage()
+        --     if not spellID then return end
+        --     local startTime, duration, enabled = GetSpellCooldown(spellID)
+        --     local _, brcd = GetSpellCooldown(18499)
+        --     local cd = 0
+        --     if duration > 0 then
+        --         cd = startTime + duration - GetTime()
+        --     end
 
-        overlay_check = BerserkerRage
+        --     return 18499, (cd > 2.5 and cd < max and brcd == 0 and not UnitBuff("player", enrageSpellName))
+        -- end
+
+        -- overlay_check = BerserkerRage
+        overlay_check = function()
+            local now = GetTime()
+            local _, brcd = GetSpellCooldown(18499)
+            return 18499, (now < endTime and now > startTime and brcd == 0 and not UnitBuff("player", enrageSpellName))
+        end
     end
+
+    if class == "PRIEST" then
+        local IsPlayerSpell = IsPlayerSpell
+        check_interval = 1
+        overlay_check = function()
+            if IsPlayerSpell(123040) then
+                local _, duration = GetSpellCooldown(123040) -- shadow fiend
+                -- 123040 -- mindbender
+                if duration <= 1.5 then return 123040, true end
+                return 123040, false
+            else
+                local _, duration = GetSpellCooldown(34433)
+                if duration <= 1.5 then return 123040, true end
+                return 123040, false
+            end
+        end
+    end
+
     if not overlay_check then return end
 
     local expired = 0
     local state = {}
+    f:RegisterEvent("PLAYER_ENTERING_WORLD")
+    function f:PLAYER_ENTERING_WORLD()
+        table.wipe(state)
+    end
+
     f:SetScript("OnUpdate", function(self, time)
         expired = expired + time
-        if expired < .5 then return end
+        if expired < check_interval then return end
         expired = 0
 
         local spellID, status = overlay_check()
@@ -1227,9 +1297,9 @@ function NugActionBar.CreateCustomOverlay(self)
                 local actionType, id, subType = GetActionInfo(action);
                 if id == spellID then
                     if status then
-                        NugActionBarButton.ShowOverlayGlow(btn)
+                        NugActionBarButton.ShowOverlayGlow(btn, true)
                     else
-                        NugActionBarButton.HideOverlayGlow(btn)
+                        NugActionBarButton.HideOverlayGlow(btn, true)
                     end
                 end
             end

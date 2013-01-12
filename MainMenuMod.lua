@@ -83,6 +83,8 @@ function NugActionBar.TrimPetBar()
         -- if not petbtn then break end
         -- petbtn:SetParent(MainMenu
     -- end
+    PetActionBarFrame:Hide()
+
     --hide attack follow stay buttons
     PetActionButton1:ClearAllPoints()
     PetActionButton1:SetPoint("TOPLEFT", "ActionButton1", "BOTTOMLEFT", -90, -500);
