@@ -125,6 +125,7 @@ local MSQ
 local MSQG
 function NugActionBar.ReplaceDefauitActionButtons()
     NugActionBar:RegisterEvent("PLAYER_LOGIN")
+    NugActionBar:RegisterEvent("SPELLS_CHANGED") -- to update remap conditions on talent swap
     NugActionBar:RegisterEvent("ACTIONBAR_SHOWGRID")
     NugActionBar:RegisterEvent("ACTIONBAR_HIDEGRID")
     NugActionBar:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
@@ -484,8 +485,8 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing, mas
 end
 
 local Mappings = {
-    ["DRUID"] = "[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] %s; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;",
-    -- ["WARRIOR"] = "[stance:1] 7; [stance:2] 8; [stance:3] 9;",
+    ["DRUID"] = "[bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;",
+    ["WARRIOR"] = "[stance:1] 7; [stance:2] 8;",
     ['MONK'] = '[form:1] %s; [form:2] 7;',
     ["PRIEST"] = "[bonusbar:1] 7;",
     ["ROGUE"] = "[bonusbar:1] 7; [form:3] 8;",
@@ -501,11 +502,20 @@ function NugActionBar.MakeStateDriverCondition()
         -- Handles prowling, prowling has no real stance, so this is a hack which utilizes the Tree of Life bar for non-resto druids.
         special = string.format(Mappings[class], (spec == 4) and 7 or 8) 
     elseif class == "MONK" then
-        special = string.format(Mappings[class], (spec == 1 and 8 or spec == 2 and 9 or spec == 3 and 7 or 9))
+        special = string.format(Mappings[class], (spec == 1 and 8 or spec == 2 and 9 or spec == 3 and 7 or 7))
+        -- print(special)
     else
         special = Mappings[class] or ''
     end
     return Mappings.BASE .. special .. " 1"
+end
+
+function NugActionBar.SPELLS_CHANGED(sefl, event)
+    for _, header in ipairs(NugActionBar.headers) do
+        if header.doremap and not InCombatLockdown() then
+            RegisterStateDriver(header, "remap", NugActionBar.MakeStateDriverCondition())
+        end
+    end
 end
 
 function NugActionBar.PLAYER_LOGIN(self,event, arg1)
@@ -561,6 +571,16 @@ local UpdateTooltip = function(self)
     end
 end
 local ButtonOnEnter = function(self)
+    if (self.NewActionTexture) then
+        MarkNewActionHighlight(self.action, false);
+        if ( self.NewActionTexture ) then
+            if ( GetNewActionHighlightMark(action) ) then
+                self.NewActionTexture:Show();
+            else
+                self.NewActionTexture:Hide();
+            end
+        end
+    end
     UpdateTooltip(self)
     ActionButton_UpdateFlyout(self)
 end
@@ -569,7 +589,7 @@ local ButtonOnLeave = function(self)
     ActionButton_UpdateFlyout(self)
 end
 
-function NugActionBar:AlignReadyButtons(name, s, e, growth, gap, scale, point, frame, relative_point, x,y)
+function NugActionBar:AlignReadyButtons(name, s, e, growth, gap, scale, cdAlpha, point, frame, relative_point, x,y)
     local prev
 
     local p, rp, xgap, ygap
@@ -593,7 +613,7 @@ function NugActionBar:AlignReadyButtons(name, s, e, growth, gap, scale, point, f
         prev = btn
 
         btn:SetScale(scale)
-        btn.isReadyButton = true
+        btn.cooldownAlpha = cdAlpha or 0.3
         -- btn.desaturate = true
         btn.fade = true
         btn:EnableMouse(false)
@@ -602,7 +622,9 @@ end
 
 function NugActionBar:CreateReadyBar(n)
     NugActionBar.CreateActionButtonRow("NugActionBarReadyButton", n)
-    local hdr = NugActionBar.CreateHeader("NugActionBarReadyButton", 9, nil, nil)
+    local class = select(2,UnitClass("player"))
+    local ReadyActionButtonPage = class == "MONK" and 1 or 9
+    local hdr = NugActionBar.CreateHeader("NugActionBarReadyButton", ReadyActionButtonPage, nil, nil)
     hdr:SetAttribute("_onstate-visib",[[
         for i,btn in ipairs(btns) do
             local page = btn:GetAttribute("actionpage")-1
@@ -621,11 +643,11 @@ function NugActionBar:CreateReadyBar(n)
 
 
     NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 1, 5,
-                                    "DOWN", 6, .8,
-                                    "TOPLEFT", UIParent, "CENTER", 250, 90)
+                                    "DOWN", 6, .8, .3,
+                                    "TOPLEFT", UIParent, "CENTER", 240, 90)
 
     NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 6, 10,
-                                    "DOWN", 6, .8,
+                                    "DOWN", 6, .8, .3,
                                     "TOPRIGHT", "NugActionBarReadyButton1", "TOPLEFT", -6, 0)
 
     -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 5, 6,
@@ -634,8 +656,8 @@ function NugActionBar:CreateReadyBar(n)
 
 
     NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 11, 12,
-                                    "RIGHT", 6, 1.1,
-                                    "TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 380, 120)--115)
+                                    "RIGHT", 6, 1.1, .5,
+                                    "TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 380, 220)--115)
 
 
     -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 9, 12,
@@ -919,9 +941,9 @@ end
 function NugActionBarButton.ACTIONBAR_UPDATE_STATE(self,event)
     local action = GetActionID(self)
     if ( action and (IsCurrentAction(action) or IsAutoRepeatAction(action)) ) then
-        self:SetChecked(1)
+        self:SetChecked(true)
     else
-        self:SetChecked(0)
+        self:SetChecked(false)
     end
 end
 
@@ -931,8 +953,15 @@ local ReadyCooldownOnUpdate = function(self, time)
         NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self)
     end
 end
-local function ReadyCooldownFrame_SetTimer(frame, self, start, duration, enable, charges, maxCharges)
-    if ( start and start > 0 and duration > 1.5 and enable > 0 ) then
+local function ReadyCooldownFrame_SetTimer(frame, self, start, duration, enable, charges, maxCharges, isUsable, notEnoughMana)
+    if not isUsable then
+            if frame.desaturate then
+                frame.icon:SetDesaturated(true)
+            end
+            if frame.fade then
+                frame:SetAlpha(frame.cooldownAlpha)
+            end
+    elseif ( start and start > 0 and duration > 1.5 and enable > 0 ) then
         self:SetCooldown(start, duration, 0,0);
         -- self:SetCooldown(start, duration, charges, maxCharges);
         if (maxCharges == 0) or (maxCharges > 0 and charges == 0) then
@@ -940,7 +969,7 @@ local function ReadyCooldownFrame_SetTimer(frame, self, start, duration, enable,
                 frame.icon:SetDesaturated(true)
             end
             if frame.fade then
-                frame:SetAlpha(0.3)
+                frame:SetAlpha(frame.cooldownAlpha)
             end
         else
             frame.icon:SetDesaturated(false)
@@ -959,11 +988,31 @@ function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
     local action = GetActionID(self)
     local cooldown = self.cooldown
     local start, duration, enable, charges, maxCharges = GetActionCooldown(action);
-    if self.isReadyButton then
-        ReadyCooldownFrame_SetTimer(self, cooldown, start, duration, enable, charges, maxCharges);
+    local isUsable, notEnoughMana = IsUsableAction(action)
+    local locStart, locDuration = GetActionLossOfControlCooldown(action);
+    if self.cooldownAlpha then
+        ReadyCooldownFrame_SetTimer(self, cooldown, start, duration, enable, charges, maxCharges, isUsable, notEnoughMana);
     else
         -- CooldownFrame_SetTimer(cooldown, start, duration, enable, charges, maxCharges);
-        CooldownFrame_SetTimer(cooldown, start, duration, enable, 0, 0);
+        -- CooldownFrame_SetTimer(cooldown, start, duration, enable, 0, 0);
+
+        if ( (locStart + locDuration) > (start + duration) ) then
+            if ( self.cooldown.currentCooldownType ~= COOLDOWN_TYPE_LOSS_OF_CONTROL ) then
+                self.cooldown:SetEdgeTexture("Interface\\Cooldown\\edge-LoC");
+                self.cooldown:SetSwipeColor(0.17, 0, 0);
+                self.cooldown:SetHideCountdownNumbers(true);
+                self.cooldown.currentCooldownType = COOLDOWN_TYPE_LOSS_OF_CONTROL;
+            end
+            CooldownFrame_SetTimer(cooldown, locStart, locDuration, 1, nil, nil, true);
+        else
+            if ( self.cooldown.currentCooldownType ~= COOLDOWN_TYPE_NORMAL ) then
+                self.cooldown:SetEdgeTexture("Interface\\Cooldown\\edge");
+                self.cooldown:SetSwipeColor(0, 0, 0);
+                self.cooldown:SetHideCountdownNumbers(false);
+                self.cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL;
+            end
+            CooldownFrame_SetTimer(cooldown, start, duration, enable, charges, maxCharges);
+        end
     end
 end
 function NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self,event, inRange)
@@ -974,12 +1023,15 @@ function NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self,event, inRange)
     local isUsable, notEnoughMana = IsUsableAction(action);
     if ( isUsable ) then
         icon:SetVertexColor(1.0, 1.0, 1.0);
+        -- icon:SetDesaturated(false)
         normalTexture:SetVertexColor(1.0, 1.0, 1.0);
     elseif ( notEnoughMana ) then
-        icon:SetVertexColor(0.7, 0.7, 1.0);
+        icon:SetVertexColor(.55, .55, 1);
+        -- icon:SetDesaturated(true)
         normalTexture:SetVertexColor(0.7, 0.7, 1.0);
     else
         icon:SetVertexColor(0.4, 0.4, 0.4);
+        -- icon:SetDesaturated(false)
         normalTexture:SetVertexColor(1.0, 1.0, 1.0);
     end
 end
@@ -1127,7 +1179,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         NugActionBarButton.ACTIONBAR_UPDATE_USABLE(self)
         NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self)
 
-        if not self.isReadyButton then
+        if not self.cooldownAlpha then
             if not secure then self:Show() end
             self:SetAlpha(1)
         end
