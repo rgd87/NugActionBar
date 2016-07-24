@@ -42,7 +42,8 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
 
     if db.movebottomright then
         NugActionBar.MoveBottomRightBar()
-        NugActionBar.HideShapeshiftBar()
+        -- NugActionBar.HideShapeshiftBar()
+        NugActionBar.MoveShapeshiftBar()
         NugActionBar.TrimPetBar()
 
         --disable expbar
@@ -133,7 +134,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
     -- VehicleMenuBar.Show = function() end
     -- BonusActionBarFrame:Hide()
     -- BonusActionBarFrame.Show = function() end
-    UIParent_ManageFramePositions = function() end -- dunno if it'll help with taint or cause it too
+    -- UIParent_ManageFramePositions = function() end -- dunno if it'll help with taint or cause it too
     -- MainMenuBar:Hide()
     -- MainMenuBar.Show = function() end
     local prev
@@ -844,11 +845,13 @@ function NugActionBar.CreateButton(header, rowName, page, index)
 
     local ag = btn.oldicon:CreateAnimationGroup()
     local a1 = ag:CreateAnimation("Alpha")
-    a1:SetChange(1)
+    a1:SetFromAlpha(1)
+    a1:SetToAlpha(1)
     a1:SetDuration(0)
     a1:SetOrder(1)
     local a2 = ag:CreateAnimation("Alpha")
-    a2:SetChange(-1)
+    a2:SetFromAlpha(0)
+    a2:SetToAlpha(0)
     a2:SetDuration(0.2)
     a2:SetOrder(2)
     ag:SetScript("OnFinished",function(self)
@@ -962,6 +965,12 @@ local function ReadyCooldownFrame_SetTimer(frame, self, start, duration, enable,
                 frame:SetAlpha(frame.cooldownAlpha)
             end
     elseif ( start and start > 0 and duration > 1.5 and enable > 0 ) then
+        -- self:SetEdgeTexture("Interface\\Cooldown\\edge",1,1,1,1);
+        self:SetDrawEdge(false);
+        self:SetSwipeColor(0, 0, 0, 0.5);
+        self:SetHideCountdownNumbers(false);
+        -- self:SetReverse(true)
+        self.currentCooldownType = COOLDOWN_TYPE_NORMAL;
         self:SetCooldown(start, duration, 0,0);
         -- self:SetCooldown(start, duration, charges, maxCharges);
         if (maxCharges == 0) or (maxCharges > 0 and charges == 0) then
@@ -987,7 +996,8 @@ end
 function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
     local action = GetActionID(self)
     local cooldown = self.cooldown
-    local start, duration, enable, charges, maxCharges = GetActionCooldown(action);
+    local start, duration, enable = GetActionCooldown(action);
+    local charges, maxCharges = GetActionCharges(action)
     local isUsable, notEnoughMana = IsUsableAction(action)
     local locStart, locDuration = GetActionLossOfControlCooldown(action);
     if self.cooldownAlpha then
@@ -1003,7 +1013,7 @@ function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
                 self.cooldown:SetHideCountdownNumbers(true);
                 self.cooldown.currentCooldownType = COOLDOWN_TYPE_LOSS_OF_CONTROL;
             end
-            CooldownFrame_SetTimer(cooldown, locStart, locDuration, 1, nil, nil, true);
+            CooldownFrame_Set(cooldown, locStart, locDuration, 1, nil, nil, true);
         else
             if ( self.cooldown.currentCooldownType ~= COOLDOWN_TYPE_NORMAL ) then
                 self.cooldown:SetEdgeTexture("Interface\\Cooldown\\edge");
@@ -1011,7 +1021,7 @@ function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
                 self.cooldown:SetHideCountdownNumbers(false);
                 self.cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL;
             end
-            CooldownFrame_SetTimer(cooldown, start, duration, enable, charges, maxCharges);
+            CooldownFrame_Set(cooldown, start, duration, enable, charges, maxCharges);
         end
     end
 end
@@ -1260,30 +1270,30 @@ function NugActionBar.CreateCustomOverlay(self)
 
     local _, class = UnitClass("player")
     if class == "WARRIOR" then
-        local startTime, endTime = 0, 0.1
-        -- local min, max, spellID
-        local GetSpellCooldown = GetSpellCooldown
-        local UnitBuff = UnitBuff
-        local enrageSpellName = GetSpellInfo(12880)
-        -- f:RegisterEvent("SPELLS_CHANGED")
-        f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        -- local startTime, endTime = 0, 0.1
+        -- -- local min, max, spellID
+        -- local GetSpellCooldown = GetSpellCooldown
+        -- local UnitBuff = UnitBuff
+        -- local enrageSpellName = GetSpellInfo(12880)
+        -- -- f:RegisterEvent("SPELLS_CHANGED")
+        -- f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
-        local COMBATLOG_OBJECT_AFFILIATION_MINE = COMBATLOG_OBJECT_AFFILIATION_MINE
-        local bit_band = bit.band
-        function f.COMBAT_LOG_EVENT_UNFILTERED( self, event, timestamp, eventType, hideCaster,
-                srcGUID, srcName, srcFlags, srcFlags2,
-                dstGUID, dstName, dstFlags, dstFlags2,
-                spellID, spellName, spellSchool, ...)
-            local amount, overkill, _, _, _, _, critical = ...
-            local isSrcPlayer = (bit_band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE)
-            if (spellID == 12294 or spellID == 23881) and isSrcPlayer and eventType == "SPELL_DAMAGE" then
-                if not critical then
-                    local now = GetTime()
-                    startTime = now
-                    endTime = now + (spellID == 12294 and 3 or 2)
-                end
-            end
-        end
+        -- local COMBATLOG_OBJECT_AFFILIATION_MINE = COMBATLOG_OBJECT_AFFILIATION_MINE
+        -- local bit_band = bit.band
+        -- function f.COMBAT_LOG_EVENT_UNFILTERED( self, event, timestamp, eventType, hideCaster,
+        --         srcGUID, srcName, srcFlags, srcFlags2,
+        --         dstGUID, dstName, dstFlags, dstFlags2,
+        --         spellID, spellName, spellSchool, ...)
+        --     local amount, overkill, _, _, _, _, critical = ...
+        --     local isSrcPlayer = (bit_band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE)
+        --     if spellID == 23881 and isSrcPlayer and eventType == "SPELL_DAMAGE" then
+        --         if not critical then
+        --             local now = GetTime()
+        --             startTime = now
+        --             endTime = now + (spellID == 12294 and 3 or 2)
+        --         end
+        --     end
+        -- end
         -- f:SetScript("OnEvent", function(self)
         --         if IsPlayerSpell(12294) then spellID, max = 12294, 5.5
         --         elseif IsPlayerSpell(23881) then spellID, max = 23881, 4
@@ -1303,9 +1313,9 @@ function NugActionBar.CreateCustomOverlay(self)
 
         -- overlay_check = BerserkerRage
         overlay_check = function()
-            local now = GetTime()
-            local _, brcd = GetSpellCooldown(18499)
-            return 18499, (now < endTime and now > startTime and brcd == 0 and not UnitBuff("player", enrageSpellName))
+            -- local now = GetTime()
+            -- local _, brcd = GetSpellCooldown(18499)
+            -- return 18499, (now < endTime and now > startTime and brcd == 0 and not UnitBuff("player", enrageSpellName))
         end
     end
 

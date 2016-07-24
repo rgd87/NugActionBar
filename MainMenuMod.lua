@@ -73,6 +73,9 @@ function NugActionBar.HideRightPart()
     
     MainMenuMaxLevelBar2:Hide()
     MainMenuMaxLevelBar3:Hide()
+
+    SlidingActionBarTexture0:Hide()
+    SlidingActionBarTexture1:Hide()
 end
 
 function NugActionBar.TrimPetBar()
@@ -83,7 +86,9 @@ function NugActionBar.TrimPetBar()
         -- if not petbtn then break end
         -- petbtn:SetParent(MainMenu
     -- end
-    -- PetActionBarFrame:Hide()
+
+    SlidingActionBarTexture0:Hide()
+    SlidingActionBarTexture1:Hide()
 
     --hide attack follow stay buttons
     PetActionButton1:ClearAllPoints()
@@ -121,4 +126,10 @@ function NugActionBar.HideShapeshiftBar()
     local dummyframe = CreateFrame("Frame")
     StanceBarFrame:SetParent(dummyframe)
     dummyframe:Hide()
+end
+
+function NugActionBar.MoveShapeshiftBar()
+    hooksecurefunc(StanceBarFrame,"Show",function(self)
+            self:Hide()
+        end)
 end
