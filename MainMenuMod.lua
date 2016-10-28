@@ -9,7 +9,7 @@ function NugActionBar.HideHotkeys()
             name:Hide();  name.Show = function() end;
             hotkey:Hide();  hotkey.Show = function() end;
             border:Hide();  border.Show = function() end;   -- green item border
-            
+
             -- pushed state flash
             -- btn:SetPushedTexture([[Interface\Cooldown\star4]])
             -- btn:GetPushedTexture():SetBlendMode("ADD")
@@ -22,8 +22,8 @@ end
 function NugActionBar.HideRightPart()
     MainMenuBarTexture2:Hide();
     MainMenuBarTexture3:Hide();
-    
-    
+
+
     local MicroButtons = {
         CharacterMicroButton,
         SpellbookMicroButton,
@@ -45,32 +45,26 @@ function NugActionBar.HideRightPart()
         end)
         mbtn:Hide()
     end
-    
-    
-    --disable exp bar
-    ReputationWatchBar:UnregisterAllEvents()
-    ExhaustionTick:UnregisterAllEvents()
-    MainMenuExpBar:Hide();
-    MainMenuExpBar.pauseUpdates = true;
-    MainMenuBarMaxLevelBar:Show();
-    ExhaustionTick:Hide();
-    
+
+
+
+
 --~     -- short expbar
---~     MainMenuExpBar_SetWidth(512)
---~     MainMenuExpBar:ClearAllPoints()
---~     MainMenuExpBar:SetPoint("TOPLEFT",0,0)
-    
+    MainMenuExpBar_SetWidth(512)
+    MainMenuExpBar:ClearAllPoints()
+    MainMenuExpBar:SetPoint("TOPLEFT",0,0)
+
     MainMenuBar:EnableMouse(false)
     MainMenuBarBackpackButton:ClearAllPoints();
     MainMenuBarBackpackButton:SetPoint("BOTTOMLEFT", "UIParent","BOTTOM" , 0, -200);
-    
+
     ActionBarDownButton:Hide()
     ActionBarUpButton:Hide()
     MainMenuBarPageNumber:Hide()
     MainMenuBarLeftEndCap:Hide()
 --~     MainMenuBarRightEndCap:Hide()
-    MainMenuBarRightEndCap:SetPoint("BOTTOMLEFT", MainMenuBarArtFrame,"BOTTOMRIGHT" , -543, 0) 
-    
+    MainMenuBarRightEndCap:SetPoint("BOTTOMLEFT", MainMenuBarArtFrame,"BOTTOMRIGHT" , -543, 0)
+
     MainMenuMaxLevelBar2:Hide()
     MainMenuMaxLevelBar3:Hide()
 
@@ -93,26 +87,26 @@ function NugActionBar.TrimPetBar()
     --hide attack follow stay buttons
     PetActionButton1:ClearAllPoints()
     PetActionButton1:SetPoint("TOPLEFT", "ActionButton1", "BOTTOMLEFT", -90, -500);
-    
+
     -- 4 spell buttons
     PetActionButton4:ClearAllPoints()
     PetActionButton4:SetPoint("BOTTOMLEFT", "MultiBarBottomLeftButton1", "TOPLEFT", 15, 7);
-    
+
     --hide agressive button
     PetActionButton8:ClearAllPoints()
     PetActionButton8:SetPoint("TOPLEFT", "ActionButton1", "BOTTOMLEFT", -90, -500);
-    
+
     PetActionButton8:ClearAllPoints()
     PetActionButton8:SetPoint("TOPLEFT", "ActionButton1", "BOTTOMLEFT", -90, -500);
-    
+
 --~ for 4 buttons
     PetActionButton9:ClearAllPoints()
-    PetActionButton9:SetPoint("BOTTOMRIGHT", PetActionButton4, "BOTTOMLEFT", -8, 0);    
+    PetActionButton9:SetPoint("BOTTOMRIGHT", PetActionButton4, "BOTTOMLEFT", -8, 0);
     PetActionButton9:SetScale(0.7)
-    
+
     PetActionButton10:ClearAllPoints()
-    --PetActionButton10:SetPoint("BOTTOMRIGHT", PetActionButton4, "BOTTOMLEFT", -20, 0);    
-    PetActionButton10:SetPoint("BOTTOMRIGHT", PetActionButton9, "BOTTOMLEFT", -8, 0);    
+    --PetActionButton10:SetPoint("BOTTOMRIGHT", PetActionButton4, "BOTTOMLEFT", -20, 0);
+    PetActionButton10:SetPoint("BOTTOMRIGHT", PetActionButton9, "BOTTOMLEFT", -8, 0);
     PetActionButton10:SetScale(0.7)
 end
 
@@ -126,6 +120,36 @@ function NugActionBar.HideShapeshiftBar()
     local dummyframe = CreateFrame("Frame")
     StanceBarFrame:SetParent(dummyframe)
     dummyframe:Hide()
+end
+
+function NugActionBar.DisableExpBar()
+    -- IsXPUserDisabled = function() return true end
+    -- SetCVar("showArtifactXPBar", "1")
+
+    hooksecurefunc("MainMenuBar_UpdateExperienceBars", function()
+        MainMenuExpBar:Hide();
+		MainMenuExpBar.pauseUpdates = true;
+		ExhaustionTick:Hide();
+
+        ArtifactWatchBar:Hide();
+
+        HonorWatchBar:Hide();
+
+        ReputationWatchBar:Hide();
+
+        MainMenuBarMaxLevelBar:Show(); --cap
+
+        UIParent_ManageFramePositions();
+		UpdateContainerFrameAnchors();
+    end)
+
+    -- --disable exp bar
+    -- ReputationWatchBar:UnregisterAllEvents()
+    -- ExhaustionTick:UnregisterAllEvents()
+    -- MainMenuExpBar:Hide();
+    -- MainMenuExpBar.pauseUpdates = true;
+    -- MainMenuBarMaxLevelBar:Show();
+    -- ExhaustionTick:Hide();
 end
 
 function NugActionBar.MoveShapeshiftBar()

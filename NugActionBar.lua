@@ -59,6 +59,8 @@ function NugActionBar.ADDON_LOADED(self,event,arg1)
         NugActionBar.HideRightPart()
     end
 
+    NugActionBar.DisableExpBar()
+
     if db.changeoverlay then autocastOverlay = true end
 
     if db.replacedefault then
@@ -105,8 +107,8 @@ NugActionBar.SlashCmd = function(msg)
         NugActionBar.MoveNewBar(db.x,0)
     end
     if k == "readybar" then
-        NugActionBarDB_Character.ReadyBar = not NugActionBarDB_Character.ReadyBar 
-    end 
+        NugActionBarDB_Character.ReadyBar = not NugActionBarDB_Character.ReadyBar
+    end
     if k == "readyunlock" then
         NugActionBar:EnableMouseOnReadyBar(true)
     end
@@ -168,6 +170,40 @@ function NugActionBar.ReplaceDefauitActionButtons()
     -- PetBattleFrame.BottomFrame.PetSelectionFrame:SetParent(bBars)
     PetBattleFrame.BottomFrame:SetFrameStrata("HIGH")
 
+    -- UnitPowerBarAlt_TearDown(PlayerPowerBarAlt)
+    --
+    -- UnitPowerBarAlt_SetUp(PlayerPowerBarAlt, 26)
+    -- local textureInfo = {
+    --     frame = { "Interface\\UNITPOWERBARALT\\UndeadMeat_Horizontal_Frame", 1, 1, 1 },
+    --     background = { "Interface\\UNITPOWERBARALT\\Generic1Player_Horizontal_Bgnd", 1, 1, 1 },
+    --     fill = { "Interface\\UNITPOWERBARALT\\Generic1_Horizontal_Fill", 0.16862745583057, 0.87450987100601, 0.24313727021217 },
+    --     spark = { nil, 1, 1, 1 },
+    --     flash = { "Interface\\UNITPOWERBARALT\\Meat_Horizontal_Flash", 1, 1, 1 },
+    -- }
+    -- for name, info in next, textureInfo do
+    --     local texture = PlayerPowerBarAlt[name]
+    --     local path, r, g, b = unpack(info)
+    --     texture:SetTexture(path)
+    --     texture:SetVertexColor(r, g, b)
+    -- end
+    --
+    -- PlayerPowerBarAlt.minPower = 0
+    -- PlayerPowerBarAlt.maxPower = 300
+    -- PlayerPowerBarAlt.range = PlayerPowerBarAlt.maxPower - PlayerPowerBarAlt.minPower
+    -- PlayerPowerBarAlt.value = 150
+    -- PlayerPowerBarAlt.displayedValue = PlayerPowerBarAlt.value
+    -- TextStatusBar_UpdateTextStringWithValues(PlayerPowerBarAlt.statusFrame, PlayerPowerBarAlt.statusFrame.text, PlayerPowerBarAlt.displayedValue, PlayerPowerBarAlt.minPower, PlayerPowerBarAlt.maxPower)
+    --
+    -- PlayerPowerBarAlt:UpdateFill()
+    -- PlayerPowerBarAlt:Show()
+
+    PlayerPowerBarAlt.IsUserPlaced = function() return true end
+    PlayerPowerBarAlt:SetScript("OnShow",function()
+        PlayerPowerBarAlt:ClearAllPoints()
+        PlayerPowerBarAlt:SetPoint("CENTER", UIParent, "CENTER", 0, -200)
+    end)
+    -- print('haaaa')
+    -- UIPARENT_ALTERNATE_FRAME_POSITIONS["PlayerPowerBarAlt_Bottom"] = UIPARENT_ALTERNATE_FRAME_POSITIONS["PlayerPowerBarAlt_Top"];
 
     -- MainMenuBar_UpdateArt = function() return true end
 
@@ -243,7 +279,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
 
     -- MSQ = LibStub and LibStub("Masque")
     -- if MSQ then
-        -- MSQG = MSQ:Group("NugActionBar", "NABGroup") 
+        -- MSQG = MSQ:Group("NugActionBar", "NABGroup")
     -- end
 
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("ActionButton", 1, true, nil, MSQG))
@@ -251,7 +287,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarBottomRightButton", 5, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarLeftButton", 4, nil))
     table.insert(NugActionBar.headers, NugActionBar.CreateHeader("MultiBarRightButton", 3, nil))
-    
+
   if not NugActionBarDB_Character.hiderighthalf then
     local replacebags = true
     NugActionBar.CreateActionButtonRow("NugActionBarButton", replacebags and 12 or 8)
@@ -259,7 +295,7 @@ function NugActionBar.ReplaceDefauitActionButtons()
         CharacterBag0Slot:ClearAllPoints()
         CharacterBag0Slot:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 1000, 1000)
         local prev
-        for i=9,12 do 
+        for i=9,12 do
             local btn = _G["NugActionBarButton"..i]
             btn:SetScale(0.75)
             if not prev then btn:SetPoint("TOPLEFT", "MainMenuBarBackpackButton", "TOPLEFT", -168,-3)
@@ -284,96 +320,6 @@ function NugActionBar.ReplaceDefauitActionButtons()
 
 end
 
--- function MultiActionBar_Update()
---     if InCombatLockdown() then return end
---     local leftHeader = NugActionBar.headers[4]
---     local rightHeader = NugActionBar.headers[5]
---     for _,btn in ipairs(leftHeader) do
---         if SHOW_MULTI_ACTIONBAR_3 then
---             btn:Show()
---         else btn:Hide() end
---     end
---     for _,btn in ipairs(rightHeader) do
---         if SHOW_MULTI_ACTIONBAR_4 then
---             btn:Show()
---         else btn:Hide() end
---     end
--- end
-
-
--- local allowedSpellsSnippet
--- local _,class = UnitClass("player")
--- if class == "PRIEST" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[2050] = true -- Heal
---         healingSpells[2060] = true -- Greater Heal
---         healingSpells[2061] = true -- Flash Heal
---         healingSpells[32546] = true -- Binding Heal
---         healingSpells[47540] = true -- Penance
---         healingSpells[33076] = true -- Prayer of Mending
---         healingSpells[596] = true -- Prayer of Healing
---         healingSpells[17] = true -- Power Word: Shield
---         healingSpells[139] = true -- Renew
---         healingSpells[33206] = true -- Pain Suppression
---         healingSpells[47788] = true -- Guardian Spirit
---         healingSpells[34861] = true -- Circle of Healing
---         healingSpells[527] = true -- Purify
---         healingSpells[73325] = true -- Leap of Faith
---         healingSpells[10060] = true -- Power Infusion
---         healingSpells[88684] = true -- Holy Word: Serenity (it works!)
---     ]]
--- elseif class == "DRUID" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[50464] = true -- Nourish
---         healingSpells[774] = true -- Rejuvenation
---         healingSpells[8936] = true -- Regrowth
---         healingSpells[2782] = true -- Remove Corruption
---         healingSpells[33763] = true -- Lifebloom
---         healingSpells[5185] = true -- Healing Touch
---         healingSpells[18562] = true -- Swiftmend
---         healingSpells[48438] = true -- Wild Growth
---     ]]
--- elseif class == "SHAMAN" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[331] = true -- Healing Wave
---         healingSpells[51886] = true -- Cleanse Spirit
---         healingSpells[8004] = true -- Healing Surge
---         healingSpells[1064] = true -- Chain Heal
---         healingSpells[974] = true -- Earth Shield
---         healingSpells[61295] = true -- Riptide
---     ]]
--- elseif class == "PALADIN" then
---     allowedSpellsSnippet = [[
---         healingSpells = table.new()
---         healingSpells[635] = true -- Holy Light
---         healingSpells[85673] = true -- Word of Glory
---         healingSpells[19750] = true -- Flash of Light
---         healingSpells[633] = true -- Lay on Hands
---         healingSpells[4987] = true -- Cleanse
---         healingSpells[82326] = true -- Divine Light
---         healingSpells[85222] = true -- Light of Dawn
---         healingSpells[53563] = true -- Beacon of Light
---         healingSpells[20473] = true -- Holy Shock
---     ]]
--- else allowedSpellsSnippet = [[ healingSpells = table.new() ]] end
-
--- local HeaderRangeCheck = function(self,time)
---     self.OnUpdateCounter = (self.OnUpdateCounter or 0) + time
---     if self.OnUpdateCounter < 0.5 then return end
---     self.OnUpdateCounter = 0
-
---     for i,btn in ipairs(self) do
---         local runit = btn:GetAttribute("rangeunit")
---         if runit then
---             NugActionBar.ACTIONBAR_UPDATE_USABLE(btn,nil, UnitInRange(runit))
---         else
---             NugActionBar.ACTIONBAR_UPDATE_USABLE(btn,nil, IsActionInRange(GetActionID(btn)))    
---         end
---     end
--- end
 function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing, masque_group)
     local header = CreateFrame("Frame", nil, UIParent, "SecureHandlerStateTemplate")
     header:Execute[[ btns = table.new() ]]
@@ -416,7 +362,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing, mas
         if name ~= "showgrid" then return end
         local show = value == 1
         for i,btn in ipairs(btns) do
-            if show then 
+            if show then
                 btn:CallMethod("ShowGrid")
             else
                 btn:CallMethod("HideGrid")
@@ -462,7 +408,7 @@ function NugActionBar.CreateHeader(rowName, page, doremap, mouseoverHealing, mas
     -- header:SetWidth(32)
     -- header:SetHeight(32)
     -- header:SetPoint("CENTER",UIParent, "CENTER",0,0)
-    
+
     header:SetAttribute("showgrid", 0)
     for i=1,12 do
         local btn = NugActionBar.CreateButton(header, rowName, page, i)
@@ -501,9 +447,9 @@ function NugActionBar.MakeStateDriverCondition()
     local spec = GetSpecialization()
     if class == "DRUID" then
         -- Handles prowling, prowling has no real stance, so this is a hack which utilizes the Tree of Life bar for non-resto druids.
-        special = string.format(Mappings[class], (spec == 4) and 7 or 8) 
-    elseif class == "MONK" then
-        special = string.format(Mappings[class], (spec == 1 and 8 or spec == 2 and 9 or spec == 3 and 7 or 7))
+        special = string.format(Mappings[class], (spec == 4) and 7 or 8)
+    -- elseif class == "MONK" then
+        -- special = string.format(Mappings[class], (spec == 1 and 8 or spec == 2 and 9 or spec == 3 and 7 or 7))
         -- print(special)
     else
         special = Mappings[class] or ''
@@ -524,11 +470,11 @@ function NugActionBar.PLAYER_LOGIN(self,event, arg1)
     if useTullaRange then
         hooksecurefunc(tullaRange, 'PLAYER_LOGIN',
                        function(self, event)
-                           hooksecurefunc(NugActionBarButton,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
-                           hooksecurefunc(NugActionBarButton,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
+                        --    hooksecurefunc(NugActionBarButton,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
+                        --    hooksecurefunc(NugActionBarButton,'ACTIONBAR_UPDATE_USABLE', tullaRange.UpdateButtonUsable)
                            for _, hdr in ipairs(NugActionBar.headers) do
                                for i,frame in ipairs(hdr) do
-                                   tullaRange.RegisterButton(frame)
+                                   tullaRange:Register(frame)
                                end
                            end
                        end)
@@ -624,7 +570,8 @@ end
 function NugActionBar:CreateReadyBar(n)
     NugActionBar.CreateActionButtonRow("NugActionBarReadyButton", n)
     local class = select(2,UnitClass("player"))
-    local ReadyActionButtonPage = class == "MONK" and 1 or 9
+    -- local ReadyActionButtonPage = class == "MONK" and 1 or 9
+    local ReadyActionButtonPage = 9
     local hdr = NugActionBar.CreateHeader("NugActionBarReadyButton", ReadyActionButtonPage, nil, nil)
     hdr:SetAttribute("_onstate-visib",[[
         for i,btn in ipairs(btns) do
@@ -643,27 +590,33 @@ function NugActionBar:CreateReadyBar(n)
     end)
 
 
-    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 1, 5,
-                                    "DOWN", 6, .8, .3,
-                                    "TOPLEFT", UIParent, "CENTER", 240, 90)
-
-    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 6, 10,
-                                    "DOWN", 6, .8, .3,
-                                    "TOPRIGHT", "NugActionBarReadyButton1", "TOPLEFT", -6, 0)
-
-    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 5, 6,
-    --                                 "DOWN", 6, .8,
+    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 1, 5,
+    --                                 "DOWN", 6, .8, .3,
+    --                                 "TOPLEFT", UIParent, "CENTER", 240, 90)
+    --
+    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 6, 10,
+    --                                 "DOWN", 6, .8, .3,
     --                                 "TOPRIGHT", "NugActionBarReadyButton1", "TOPLEFT", -6, 0)
+    --
+    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 11, 12,
+    --                                 "RIGHT", 6, 1.1, .5,
+    --                                 "TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 380, 220)--115)
 
+    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 1, 4,
+                                    "RIGHT", 6, .6, .3,
+                                    "TOPLEFT", UIParent, "CENTER", 185, 50)
+
+    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 5, 8,
+                                    "RIGHT", 6, .6, .3,
+                                    "TOPLEFT", "NugActionBarReadyButton1", "BOTTOMLEFT", 0, -6)
+
+    NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 9, 10,
+                                    "RIGHT", 6, .6, .3,
+                                    "BOTTOMLEFT", "NugActionBarReadyButton3", "TOPLEFT", 0, 6)
 
     NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 11, 12,
-                                    "RIGHT", 6, 1.1, .5,
+                                    "RIGHT", 6, 1.1, .3,
                                     "TOPLEFT", MultiBarBottomLeftButton1, "TOPLEFT", 380, 220)--115)
-
-
-    -- NugActionBar:AlignReadyButtons( "NugActionBarReadyButton", 9, 12,
-    --                                 "RIGHT", 6, .8,
-    --                                 "BOTTOMLEFT", NugActionBarReadyButton7, "TOPLEFT", 0, 10)
 
 
     return hdr
@@ -804,6 +757,9 @@ function NugActionBar.CreateButton(header, rowName, page, index)
     btn.icon = _G[btn:GetName().."Icon"]
     btn.cooldown = _G[btn:GetName().."Cooldown"]
     btn.normalTexture = _G[btn:GetName().."NormalTexture"]
+
+    btn.cooldown:SetDrawEdge(false)
+    btn.cooldown.SetDrawEdge = function() end
 
     btn:SetID(index)
     -- local anchor = header[index-1] or header
@@ -1018,9 +974,12 @@ function NugActionBarButton.ACTIONBAR_UPDATE_COOLDOWN(self,event)
             if ( self.cooldown.currentCooldownType ~= COOLDOWN_TYPE_NORMAL ) then
                 self.cooldown:SetEdgeTexture("Interface\\Cooldown\\edge");
                 self.cooldown:SetSwipeColor(0, 0, 0);
+                self.cooldown:SetDrawEdge(false)
                 self.cooldown:SetHideCountdownNumbers(false);
                 self.cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL;
             end
+            -- print("vohiyo")
+            -- self.cooldown:SetDrawEdge(false)
             CooldownFrame_Set(cooldown, start, duration, enable, charges, maxCharges);
         end
     end
@@ -1176,6 +1135,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         self:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
         self:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
         self:UnregisterEvent("LOSS_OF_CONTROL_UPDATE") --!!!!
+        self:UnregisterEvent("LOSS_OF_CONTROL_ADDED")
         -- self:RegisterEvent("UPDATE_INVENTORY_ALERTS")
         -- self:RegisterEvent("PLAYER_TARGET_CHANGED")
         self:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
@@ -1198,6 +1158,7 @@ function NugActionBarButton.UpdateButton(self, secure, animate)
         self:UnregisterEvent("ACTIONBAR_UPDATE_USABLE")
         self:UnregisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
         self:UnregisterEvent("LOSS_OF_CONTROL_UPDATE")
+        self:UnregisterEvent("LOSS_OF_CONTROL_ADDED")
         -- self:UnregisterEvent("UPDATE_INVENTORY_ALERTS")
         -- self:UnregisterEvent("PLAYER_TARGET_CHANGED")
         self:UnregisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
@@ -1259,7 +1220,7 @@ end
 
 -- 12294 ms
 -- 23881 bt
--- bersrage overlay 
+-- bersrage overlay
 function NugActionBar.CreateCustomOverlay(self)
     local overlay_check
     local check_interval = .3
